@@ -40,6 +40,12 @@ https://stackblitz.com/github/Agustin-Paleari/calibration-app/tree/main?startScr
 
 El archivo `.stackblitzrc` inicia `npm run dev`. Esperá a que se instalen las dependencias y aparezca la vista previa. Si StackBlitz solicita acceso al repositorio, conectá tu cuenta de GitHub desde su interfaz. Los datos se guardan en el navegador y origen de esa vista previa; no se transfieren automáticamente a una publicación futura.
 
+## Versión autónoma descargable
+
+`docs/Calibration-Hub.html` incluye la aplicación, estilos, íconos y tipografías en un archivo. Descargalo desde GitHub con **Download raw file** y abrilo en un navegador de escritorio. No requiere npm ni un despliegue. Las políticas de algunos navegadores administrados pueden impedir abrir archivos locales; en ese caso utilizá la vista previa de StackBlitz.
+
+Se genera con `npm run build:standalone`. La prueba `tests/standalone.spec.ts` verifica el flujo de registro, análisis, finalización y recarga con el HTML autónomo y sin descargar recursos externos. En este entorno la política de Chromium bloquea `file://`; la prueba entrega el mismo archivo mediante una ruta interceptada del navegador, por lo que la apertura local del archivo no fue verificada aquí.
+
 ## Flujo
 
 1. Registrá tu equipo en **Impresoras** y el material en **Resinas**.
