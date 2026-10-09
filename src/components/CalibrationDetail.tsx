@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import type { RefObject } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -6,7 +7,6 @@ import {
   Plus,
   Save,
   SlidersHorizontal,
-  Ruler,
   CircleCheck,
   TriangleAlert,
   ChevronDown,
@@ -36,6 +36,8 @@ import {
 } from "../domain/recommendations";
 import type { NextParameters, Recommendation } from "../domain/recommendations";
 import { today, uid } from "../data/catalog";
+import { FlowSteps } from "./FlowSteps";
+import { MeasurementReference } from "./MeasurementReference";
 import { Badge, Criterion, Field } from "./ui";
 import { MethodSettings } from "./MethodSettings";
 import { Evolution } from "./Charts";
@@ -99,6 +101,8 @@ const fitLabels: Record<Fit, string> = {
 };
 function TrialForm({
   previous,
+  panelRef,
+  trialNumber,
   suggestion,
   seed,
   context,
@@ -106,6 +110,8 @@ function TrialForm({
   onCancel,
 }: {
   previous?: Trial;
+  panelRef: RefObject<HTMLElement | null>;
+  trialNumber: number;
   suggestion?: Recommendation;
   seed?: CalibrationType["startingPoint"];
   context?: TestContext;
@@ -136,23 +142,47 @@ function TrialForm({
         required
         value={draft[key]}
         onChange={(e) => change(key, e.target.value)}
-        placeholder="0,000"
+        placeholder={
+          key === "x"
+            ? "Ej. 12,030"
+            : key === "y"
+              ? "Ej. 9,980"
+              : key === "exposure"
+                ? "Ej. 2,500"
+                : "0,000"
+        }
       />
     </Field>
   );
+  const positive = (value: string) =>
+    Number.isFinite(number(value)) && number(value) > 0;
+  const filled = [
+    positive(draft.exposure),
+    positive(draft.layer) && number(draft.layer) <= 1,
+    positive(draft.x),
+    positive(draft.y),
+    !!draft.pin,
+    !!draft.supports,
+  ].filter(Boolean).length;
   return (
-    <section className="panel trial-form">
+    <section className="panel trial-form" ref={panelRef}>
       <div className="section-heading">
         <div>
-          <span className="eyebrow">
-            ENSAYO {previous ? "SIGUIENTE" : "INICIAL"}
-          </span>
+          <span className="eyebrow">ENSAYO #{trialNumber}</span>
           <h2>Una nueva medición</h2>
           <p className="muted">
-            Usá la misma pieza, lavado y curado para comparar.
+            Anotá lo que imprimiste y cómo quedó la pieza. Te mostramos el
+            próximo ajuste al guardar.
           </p>
         </div>
-        <span className="step-pill">01 — Registrar</span>
+        <div className="trial-completion">
+          <span aria-live="polite">{filled} de 6 datos completos</span>
+          <progress
+            aria-label="Datos básicos del ensayo completados"
+            max={6}
+            value={filled}
+          />
+        </div>
       </div>
       {seed && !previous && (
         <div className="notice">
@@ -210,87 +240,111 @@ function TrialForm({
             );
         }}
       >
-        <h4 className="form-section">
-          <SlidersHorizontal size={16} />
-          Parámetros de impresión
-        </h4>
-        <div className="form-grid">
-          {numField(
-            "exposure",
-            "Exposición normal · s",
-            !previous && !seed
-              ? "Usá el valor inicial recomendado por el fabricante para tu impresora y altura de capa."
-              : undefined,
-          )}
-          <Field label="Altura de capa · mm">
-            <select
-              value={customLayer ? "custom" : draft.layer}
-              onChange={(e) => {
-                if (e.target.value === "custom") {
-                  setCustomLayer(true);
-                  change("layer", "");
-                } else {
-                  setCustomLayer(false);
-                  change("layer", e.target.value);
-                }
-              }}
-            >
-              {[0.025, 0.03, 0.05, 0.1].map((value) => (
-                <option key={value} value={value}>
-                  {fmt(value)} mm
+        <section className="trial-block" aria-labelledby="print-block-title">
+          <div className="trial-block-heading">
+            <span className="block-number">1</span>
+            <div>
+              <h3 id="print-block-title">Datos de impresión</h3>
+              <p>Los valores que usaste al imprimir esta pieza.</p>
+            </div>
+          </div>
+          <div className="form-grid">
+            {numField(
+              "exposure",
+              "Exposición normal · s",
+              !previous && !seed
+                ? "Usá el valor inicial recomendado por el fabricante para tu impresora y altura de capa."
+                : undefined,
+            )}
+            <Field label="Altura de capa · mm">
+              <select
+                value={customLayer ? "custom" : draft.layer}
+                onChange={(e) => {
+                  if (e.target.value === "custom") {
+                    setCustomLayer(true);
+                    change("layer", "");
+                  } else {
+                    setCustomLayer(false);
+                    change("layer", e.target.value);
+                  }
+                }}
+              >
+                {[0.025, 0.03, 0.05, 0.1].map((value) => (
+                  <option key={value} value={value}>
+                    {fmt(value)} mm
+                  </option>
+                ))}
+                <option value="custom">Otra altura de capa</option>
+              </select>
+            </Field>
+            {customLayer &&
+              numField("layer", "Altura de capa personalizada · mm")}
+          </div>
+          <details className="setup-optional trial-date">
+            <summary>Fecha del ensayo · {draft.date}</summary>
+            <Field label="Fecha del ensayo">
+              <input
+                required
+                type="date"
+                value={draft.date}
+                onChange={(e) => change("date", e.target.value)}
+              />
+            </Field>
+          </details>
+        </section>
+        <section className="trial-block" aria-labelledby="measure-block-title">
+          <div className="trial-block-heading">
+            <span className="block-number">2</span>
+            <div>
+              <h3 id="measure-block-title">Mediciones y encastre</h3>
+              <p>
+                Medí el exterior en X e Y. Después, probá cómo entra el pin.
+              </p>
+            </div>
+          </div>
+          <div className="measurement-help">
+            <MeasurementReference />
+            <div>
+              <b>Una pieza. Dos medidas.</b>
+              <p>
+                El bloque tiene un único hueco central. Del pin solo registramos
+                si entra ajustado, correcto o suelto.
+              </p>
+            </div>
+          </div>
+          <div className="form-grid measurement-fields">
+            {numField("x", "Dimensión X medida · mm", "Nominal: 12,000 mm")}
+            {numField("y", "Dimensión Y medida · mm", "Nominal: 10,000 mm")}
+          </div>
+          <div className="form-grid">
+            <Field label="Encastre del pin">
+              <select
+                required
+                value={draft.pin}
+                onChange={(e) => change("pin", e.target.value)}
+              >
+                <option value="">Seleccioná el resultado</option>
+                <option value="correct">Entra con ajuste correcto</option>
+                <option value="tight">
+                  No entra o queda demasiado ajustado
                 </option>
-              ))}
-              <option value="custom">Otra altura de capa</option>
-            </select>
-          </Field>
-          {customLayer &&
-            numField("layer", "Altura de capa personalizada · mm")}
-        </div>
-        <details className="setup-optional trial-date">
-          <summary>Fecha del ensayo · {draft.date}</summary>
-          <Field label="Fecha del ensayo">
-            <input
-              required
-              type="date"
-              value={draft.date}
-              onChange={(e) => change("date", e.target.value)}
-            />
-          </Field>
-        </details>
-        <h4 className="form-section">
-          <Ruler size={16} />
-          Resultados de la pieza
-        </h4>
-        <div className="form-grid">
-          {numField("x", "Dimensión X medida · mm", "Nominal: 12,000 mm")}
-          {numField("y", "Dimensión Y medida · mm", "Nominal: 10,000 mm")}
-        </div>
-        <div className="form-grid">
-          <Field label="Encastre del pin">
-            <select
-              required
-              value={draft.pin}
-              onChange={(e) => change("pin", e.target.value)}
-            >
-              <option value="">Seleccioná el resultado</option>
-              <option value="correct">Entra con ajuste correcto</option>
-              <option value="tight">No entra o queda demasiado ajustado</option>
-              <option value="loose">Entra suelto</option>
-            </select>
-          </Field>
-          <Field label="Estado de los soportes">
-            <select
-              required
-              value={draft.supports}
-              onChange={(e) => change("supports", e.target.value)}
-            >
-              <option value="">Seleccioná el resultado</option>
-              <option value="stable">Estables · resistieron</option>
-              <option value="partial">Separación parcial</option>
-              <option value="failed">Fallaron</option>
-            </select>
-          </Field>
-        </div>
+                <option value="loose">Entra suelto</option>
+              </select>
+            </Field>
+            <Field label="Estado de los soportes">
+              <select
+                required
+                value={draft.supports}
+                onChange={(e) => change("supports", e.target.value)}
+              >
+                <option value="">Seleccioná el resultado</option>
+                <option value="stable">Estables · resistieron</option>
+                <option value="partial">Separación parcial</option>
+                <option value="failed">Fallaron</option>
+              </select>
+            </Field>
+          </div>
+        </section>
         <details
           className="adjustments"
           open={adjustmentsOpen}
@@ -331,9 +385,11 @@ function TrialForm({
             {error}
           </p>
         )}
-        <div className="form-actions">
+        <div className="form-actions trial-submit-bar">
           <span className="muted">
-            Los datos se guardan al analizar el ensayo.
+            {filled === 6
+              ? "Datos completos. Al guardar vas a ver el análisis."
+              : "Completá los datos de impresión y los resultados para analizarlos."}
           </span>
           <button type="button" className="btn secondary" onClick={onCancel}>
             Cancelar
@@ -446,6 +502,8 @@ export function CalibrationDetail({
   onBack: () => void;
   notify: (s: string) => void;
 }) {
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const formPanelRef = useRef<HTMLElement>(null);
   const [form, setForm] = useState(!c.trials.length);
   const [selected, setSelected] = useState<string | null>(null);
   const printer = store.printers.find((p) => p.id === c.printerId)!;
@@ -458,9 +516,54 @@ export function CalibrationDetail({
   const rec = current
     ? recommendRound(c.trials.slice(0, index + 1), current.method ?? c.method)
     : null;
+  const isHistorical = !!current && !!last && current.id !== last.id;
+  const latestAnalysis = last ? analyze(last) : null;
+  const missingCriteria = latestAnalysis
+    ? [
+        !latestAnalysis.x.pass ? "X en tolerancia" : "",
+        !latestAnalysis.y.pass ? "Y en tolerancia" : "",
+        !latestAnalysis.fit ? "encastre correcto" : "",
+        !latestAnalysis.stable ? "soportes estables" : "",
+      ].filter(Boolean)
+    : [];
   const latestSuggestion = last
     ? recommendRound(c.trials, c.method)
     : undefined;
+  const prepareButton = (primary: boolean) => (
+    <button
+      className={`btn ${primary ? "primary" : "secondary"}`}
+      onClick={() => {
+        setSelected(null);
+        setForm(true);
+        requestAnimationFrame(() =>
+          formPanelRef.current?.scrollIntoView({ block: "start" }),
+        );
+      }}
+    >
+      <Plus size={17} />
+      {latestAnalysis?.passed
+        ? "Repetir para comprobar"
+        : "Preparar próximo ensayo"}
+    </button>
+  );
+  const finishButton = (primary: boolean) => (
+    <button
+      className={`btn ${primary ? "primary" : "secondary"}`}
+      disabled={!latestAnalysis?.passed}
+      aria-describedby="finish-requirements"
+      onClick={() => {
+        if (
+          last &&
+          analyze(last).passed &&
+          onUpdate({ ...c, completedAt: new Date().toISOString() })
+        )
+          notify("Calibración finalizada. Tu receta quedó guardada.");
+      }}
+    >
+      <Check size={17} />
+      Finalizar calibración
+    </button>
+  );
   return (
     <>
       <button className="back-btn" onClick={onBack}>
@@ -482,7 +585,7 @@ export function CalibrationDetail({
           </p>
         </div>
         <Badge tone={c.completedAt ? "good" : "warning"}>
-          {c.completedAt ? "Calibrated" : "En progreso"}
+          {c.completedAt ? "Calibrada" : "En progreso"}
         </Badge>
       </div>
       <div className="calibration-stage">
@@ -499,23 +602,15 @@ export function CalibrationDetail({
             </span>
           )}
       </div>
-      <div className="workflow-strip">
-        {["Medir", "Analizar", "Repetir si hace falta", "Finalizar"].map(
-          (s, i) => (
-            <span
-              className={c.completedAt || (!form && i < 3) ? "active" : ""}
-              key={s}
-            >
-              <i>{c.completedAt ? <Check size={12} /> : `0${i + 1}`}</i>
-              {s}
-              {i < 3 && <ArrowRight size={14} />}
-            </span>
-          ),
-        )}
-      </div>
+      <FlowSteps
+        current={form && !c.completedAt ? 1 : 2}
+        complete={!!c.completedAt}
+      />
       {form && !c.completedAt ? (
         <TrialForm
           previous={last}
+          panelRef={formPanelRef}
+          trialNumber={c.trials.length + 1}
           seed={c.startingPoint}
           suggestion={latestSuggestion}
           context={last?.context ?? c.context}
@@ -539,6 +634,10 @@ export function CalibrationDetail({
             ) {
               setForm(false);
               setSelected(t.id);
+              requestAnimationFrame(() => {
+                resultsHeadingRef.current?.focus({ preventScroll: true });
+                resultsHeadingRef.current?.scrollIntoView({ block: "start" });
+              });
               notify("Ensayo guardado. El análisis ya está disponible.");
               return true;
             }
@@ -547,10 +646,28 @@ export function CalibrationDetail({
         />
       ) : current && a && rec ? (
         <>
+          {isHistorical && (
+            <div className="history-notice">
+              <div>
+                <b>Estás consultando el ensayo #{index + 1}</b>
+                <p>
+                  El último registrado es el #{c.trials.length}. Los próximos
+                  ajustes parten de ese resultado.
+                </p>
+              </div>
+              <button
+                className="btn secondary"
+                onClick={() => setSelected(null)}
+              >
+                Volver al último ensayo
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
           <div className="section-heading results-heading">
             <div>
               <span className="eyebrow">RESULTADOS</span>
-              <h2>
+              <h2 ref={resultsHeadingRef} tabIndex={-1}>
                 Ensayo #{index + 1}
                 <span className="muted inline-date">
                   {new Date(current.date + "T12:00:00").toLocaleDateString(
@@ -568,6 +685,81 @@ export function CalibrationDetail({
               </span>
             </div>
           </div>
+          <div className={`recommendation ${rec.kind}`}>
+            <div className="recommend-icon">
+              {rec.kind === "good" ? (
+                <CircleCheck size={23} />
+              ) : (
+                <SlidersHorizontal size={23} />
+              )}
+            </div>
+            <div>
+              <span className="eyebrow">
+                {isHistorical
+                  ? "SUGERENCIA PARA ESE ENSAYO"
+                  : c.completedAt
+                    ? "RECETA GUARDADA"
+                    : "PRÓXIMO PASO SUGERIDO"}
+              </span>
+              <h3>{rec.title}</h3>
+              <p>
+                {c.completedAt && !isHistorical
+                  ? "Tu último ensayo cumple los criterios. Encontrá estos parámetros en Recetas guardadas para verificarlos con una impresión nueva."
+                  : rec.detail}
+              </p>
+              {rec.changes.length > 0 && (
+                <div className="proposed-changes">
+                  {rec.changes.map((change) => (
+                    <span key={change.label}>
+                      <small>{change.label}</small>
+                      <b>
+                        {fmt(change.before)} <ArrowRight size={12} />{" "}
+                        {fmt(change.after)} {change.unit}
+                      </b>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <small>
+                Reglas orientativas para ensayos: no son conclusiones
+                científicas verificadas.
+              </small>
+            </div>
+          </div>
+          {!c.completedAt && !isHistorical && (
+            <div
+              className={`next-actions decision-actions ${latestAnalysis?.passed ? "ready" : ""}`}
+            >
+              <div>
+                <h3>
+                  {latestAnalysis?.passed
+                    ? "Ya podés guardar tu receta"
+                    : "Seguí con un nuevo ensayo"}
+                </h3>
+                <p className="muted" id="finish-requirements">
+                  {latestAnalysis?.passed
+                    ? "El último ensayo cumple X/Y, encastre y soportes. Podés finalizar o repetir para comprobarlo."
+                    : `Para finalizar todavía falta: ${missingCriteria.join(", ")}.`}
+                </p>
+              </div>
+              <div className="decision-buttons">
+                {latestAnalysis?.passed ? (
+                  <>
+                    {finishButton(true)}
+                    {prepareButton(false)}
+                  </>
+                ) : (
+                  <>
+                    {prepareButton(true)}
+                    {finishButton(false)}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          <h3 className="result-evidence-title">
+            Las medidas de esta impresión
+          </h3>
           <div className="results-grid">
             {(["x", "y"] as const).map((axis) => (
               <article className="panel result-card" key={axis}>
@@ -604,9 +796,7 @@ export function CalibrationDetail({
             ))}
             <article className="panel validation-card">
               <span className="eyebrow">VALIDACIÓN DEL ENSAYO</span>
-              <h3>
-                {a.passed ? "Todo está en su lugar." : "Cada detalle cuenta."}
-              </h3>
+              <h3>{a.passed ? "Ensayo aprobado" : "Qué falta para aprobar"}</h3>
               <Criterion
                 label="X e Y · ±0,050 mm"
                 pass={a.x.pass && a.y.pass}
@@ -621,37 +811,6 @@ export function CalibrationDetail({
               />
               <Criterion label="Soportes estables" pass={a.stable} />
             </article>
-          </div>
-          <div className={`recommendation ${rec.kind}`}>
-            <div className="recommend-icon">
-              {rec.kind === "good" ? (
-                <CircleCheck size={23} />
-              ) : (
-                <SlidersHorizontal size={23} />
-              )}
-            </div>
-            <div>
-              <span className="eyebrow">PRÓXIMO PASO SUGERIDO</span>
-              <h3>{rec.title}</h3>
-              <p>{rec.detail}</p>
-              {rec.changes.length > 0 && (
-                <div className="proposed-changes">
-                  {rec.changes.map((change) => (
-                    <span key={change.label}>
-                      <small>{change.label}</small>
-                      <b>
-                        {fmt(change.before)} <ArrowRight size={12} />{" "}
-                        {fmt(change.after)} {change.unit}
-                      </b>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <small>
-                Reglas orientativas para ensayos: no son conclusiones
-                científicas verificadas.
-              </small>
-            </div>
           </div>
           <details className="analysis-details">
             <summary>
@@ -697,44 +856,6 @@ export function CalibrationDetail({
             <div className="panel notes">
               <span className="eyebrow">OBSERVACIONES DEL ENSAYO</span>
               <p>{current.notes}</p>
-            </div>
-          )}
-          {!c.completedAt && (
-            <div className="next-actions">
-              <div>
-                <h3>La precisión se construye.</h3>
-                <p className="muted">Un cambio por vez. Un ensayo más cerca.</p>
-              </div>
-              <button
-                className="btn secondary"
-                disabled={!last || !analyze(last).passed}
-                title={
-                  !last || !analyze(last).passed
-                    ? "El último ensayo debe aprobar los tres criterios"
-                    : "Finalizar calibración"
-                }
-                onClick={() => {
-                  if (
-                    last &&
-                    analyze(last).passed &&
-                    onUpdate({ ...c, completedAt: new Date().toISOString() })
-                  )
-                    notify("Calibración finalizada: Calibrated.");
-                }}
-              >
-                <Check size={17} />
-                Finalizar calibración
-              </button>
-              <button
-                className="btn primary"
-                onClick={() => {
-                  setSelected(null);
-                  setForm(true);
-                }}
-              >
-                <Plus size={17} />
-                Preparar próximo ensayo
-              </button>
             </div>
           )}
           {c.completedAt && last && (

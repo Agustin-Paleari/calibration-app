@@ -59,6 +59,14 @@ Se genera con `npm run build:standalone`. La prueba `tests/standalone.spec.ts` v
 
 La navegación principal tiene **Vista general**, **Calibraciones** y **Recetas guardadas**. Impresoras y resinas siguen disponibles en el desplegable **Catálogo**, pero no son pasos obligatorios del flujo. Los registros antiguos que contienen dos resultados de encastre se conservan e identifican como registros anteriores; los ensayos nuevos registran un único encastre. Los respaldos existentes siguen siendo compatibles.
 
+## Interfaz guiada (v1.2)
+
+El inicio destaca **Continuar calibración** cuando existe un proceso pendiente. En una instalación nueva muestra una única acción principal y tres pasos, sin estadísticas vacías. El formulario reúne datos de impresión y mediciones en dos bloques, con contador de datos completos, ejemplos de formato y un esquema de X/Y. Los ajustes opcionales se conservan en desplegables.
+
+Al guardar, el foco y la vista pasan al resultado. La sugerencia y sus acciones aparecen primero: **Preparar próximo ensayo** si falta aprobar algún criterio, o **Finalizar calibración** y **Repetir para comprobar** cuando está aprobado. Los criterios pendientes se indican explícitamente. Al consultar un ensayo histórico aparece un aviso y **Volver al último ensayo**; las acciones del próximo ensayo se ofrecen en el último resultado.
+
+En móvil, los controles de entrada tienen más espacio y X/Y se muestran juntos. Los estados visibles se expresan en español; la biblioteca permite iniciar una calibración desde su estado vacío y limpiar filtros cuando no hay coincidencias. La interfaz no cambia la identidad de las calibraciones ni fusiona resultados.
+
 ## Arquitectura
 
 - `src/domain/`: tipos, referencia centralizada, análisis, validación y reglas de recomendación. Funciones independientes de React, con pruebas.

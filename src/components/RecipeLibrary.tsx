@@ -8,10 +8,12 @@ export function RecipeLibrary({
   store,
   onOpen,
   onReuse,
+  onStart,
 }: {
   store: Store;
   onOpen: (id: string) => void;
   onReuse: (id: string) => void;
+  onStart: () => void;
 }) {
   const [printer, setPrinter] = useState("all"),
     [resin, setResin] = useState("all"),
@@ -36,44 +38,56 @@ export function RecipeLibrary({
         </div>
         <BookOpen size={28} />
       </div>
-      <div className="panel recipe-filters form-grid">
-        <Field label="Filtrar por impresora">
-          <select value={printer} onChange={(e) => setPrinter(e.target.value)}>
-            <option value="all">Todas las impresoras</option>
-            {store.printers
-              .filter((p) => all.some((c) => c.printerId === p.id))
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <Field label="Filtrar por resina">
-          <select value={resin} onChange={(e) => setResin(e.target.value)}>
-            <option value="all">Todas las resinas</option>
-            {store.resins
-              .filter((r) => all.some((c) => c.resinId === r.id))
-              .map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.manufacturer} · {r.name} · {r.color}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <Field label="Filtrar por capa">
-          <select value={layer} onChange={(e) => setLayer(e.target.value)}>
-            <option value="all">Todas las alturas</option>
-            {[...new Set(all.map((c) => c.trials.at(-1)!.layer))]
-              .sort((a, b) => a - b)
-              .map((n) => (
-                <option key={n} value={n}>
-                  {fmt(n)} mm
-                </option>
-              ))}
-          </select>
-        </Field>
-      </div>
+      {all.length > 0 && (
+        <div className="panel recipe-filters form-grid">
+          <Field label="Filtrar por impresora">
+            <select
+              value={printer}
+              onChange={(e) => setPrinter(e.target.value)}
+            >
+              <option value="all">Todas las impresoras</option>
+              {store.printers
+                .filter((p) => all.some((c) => c.printerId === p.id))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Filtrar por resina">
+            <select value={resin} onChange={(e) => setResin(e.target.value)}>
+              <option value="all">Todas las resinas</option>
+              {store.resins
+                .filter((r) => all.some((c) => c.resinId === r.id))
+                .map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.manufacturer} · {r.name} · {r.color}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Filtrar por capa">
+            <select value={layer} onChange={(e) => setLayer(e.target.value)}>
+              <option value="all">Todas las alturas</option>
+              {[...new Set(all.map((c) => c.trials.at(-1)!.layer))]
+                .sort((a, b) => a - b)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    {fmt(n)} mm
+                  </option>
+                ))}
+            </select>
+          </Field>
+        </div>
+      )}
+      {all.length > 0 && (
+        <p className="recipe-match-count">
+          {recipes.length}{" "}
+          {recipes.length === 1 ? "receta encontrada" : "recetas encontradas"} ·
+          Cada calibración conserva su propio resultado.
+        </p>
+      )}
       {!recipes.length ? (
         <div className="panel">
           <Empty
@@ -82,7 +96,21 @@ export function RecipeLibrary({
                 ? "Sin recetas para estos filtros"
                 : "Tu primera receta sale de una calibración"
             }
-            detail="Al finalizar con X e Y en tolerancia, encastre correcto y soportes estables, los parámetros aparecerán acá."
+            detail={
+              all.length
+                ? "Probá otra combinación de impresora, resina o altura de capa."
+                : "Empezá una calibración y finalizala cuando X/Y, encastre y soportes estén aprobados. Guardamos acá los parámetros que funcionaron."
+            }
+            action={all.length ? "Limpiar filtros" : "Nueva calibración"}
+            onAction={
+              all.length
+                ? () => {
+                    setPrinter("all");
+                    setResin("all");
+                    setLayer("all");
+                  }
+                : onStart
+            }
           />
         </div>
       ) : (
@@ -137,8 +165,7 @@ export function RecipeLibrary({
                   </p>
                   <p className="muted">
                     Repetí con los mismos parámetros y procedimiento para
-                    comprobar consistencia. Esto no acredita una resina para
-                    usos médicos o dentales.
+                    comprobar consistencia.
                   </p>
                 </details>
                 <div className="recipe-actions">

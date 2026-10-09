@@ -4,6 +4,7 @@ import type { Store } from "../domain/types";
 import { uid } from "../data/catalog";
 import {
   ADD,
+  CUSTOM,
   addPrinter,
   addResin,
   newPrinterDraft,
@@ -12,6 +13,7 @@ import {
 import { defaultContext } from "../domain/protocol";
 import { ContextFields } from "./ContextFields";
 import { DEFAULT_METHOD } from "../domain/recommendations";
+import { FlowSteps } from "./FlowSteps";
 import { Field, Modal } from "./ui";
 import { MethodFields } from "./MethodSettings";
 import { PrinterFields, ResinFields } from "./SetupFields";
@@ -37,13 +39,38 @@ export function NewCalibration({
   const [method, setMethod] = useState(DEFAULT_METHOD);
   const [name, setName] = useState(""),
     [error, setError] = useState("");
+  const selectedPrinter = store.printers.find((p) => p.id === printerId);
+  const selectedResin = store.resins.find((r) => r.id === resinId);
+  const modelLabel =
+    printer.modelId === CUSTOM
+      ? printer.newModel.trim()
+      : store.models.find((m) => m.id === printer.modelId)?.name;
+  const printerLabel =
+    selectedPrinter?.name ??
+    (printer.brand && modelLabel
+      ? printer.name.trim() || `${printer.brand} ${modelLabel}`
+      : "");
+  const resinManufacturer =
+    resin.manufacturer === CUSTOM
+      ? resin.customManufacturer.trim()
+      : resin.manufacturer;
+  const resinName =
+    resin.name === CUSTOM ? resin.customName.trim() : resin.name;
+  const resinColor =
+    resin.color === CUSTOM ? resin.customColor.trim() : resin.color;
+  const resinLabel = selectedResin
+    ? `${selectedResin.manufacturer} · ${selectedResin.name} · ${selectedResin.color}`
+    : resinManufacturer && resinName && resinColor
+      ? `${resinManufacturer} · ${resinName} · ${resinColor}`
+      : "";
   return (
     <Modal
       title="Nueva calibración"
-      subtitle="Elegí tu equipo y material. Si todavía no los registraste, agregalos acá mismo."
+      subtitle="Elegí tu impresora y resina. En la siguiente pantalla vas a registrar la impresión y sus medidas."
       onClose={onClose}
       wide
     >
+      <FlowSteps current={0} compact />
       <form
         className="calibration-setup"
         onSubmit={(e) => {
@@ -194,13 +221,25 @@ export function NewCalibration({
           <summary>Procedimiento y trazabilidad · opcional</summary>
           <ContextFields context={context} onChange={setContext} />
         </details>
+        {printerLabel && resinLabel && (
+          <div className="setup-review" aria-label="Resumen de la selección">
+            <span>
+              <PrinterIcon size={16} />
+              <b>{printerLabel}</b>
+            </span>
+            <span>
+              <Droplets size={16} />
+              {resinLabel}
+            </span>
+          </div>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
         <div className="setup-footer">
-          <p>Equipo y material quedan guardados para la próxima vez.</p>
+          <p>Todo se guarda junto al comenzar. Podés reutilizarlo después.</p>
           <button type="submit" className="btn primary">
             Comenzar calibración
             <ArrowRight size={17} />

@@ -446,3 +446,126 @@ test("cambiar el paso para el siguiente ensayo conserva el método del ensayo hi
   await page.getByRole("button", { name: "Preparar próximo ensayo" }).click();
   await expect(page.getByLabel("Exposición normal · s")).toHaveValue("2.3");
 });
+
+test("el inicio ofrece retomar la calibración pendiente después de recargar", async ({
+  page,
+}) => {
+  await register(page);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Continuar calibración", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Continuar calibración", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Una nueva medición" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Exposición normal · s")).toHaveValue("");
+  const data = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("calibration-hub:v1")!),
+  );
+  expect(data.calibrations).toHaveLength(1);
+});
+test("señala lo que falta y pone finalizar como acción principal cuando el último ensayo aprueba", async ({
+  page,
+}) => {
+  await register(page);
+  await expect(
+    page.getByRole("progressbar", {
+      name: "Datos básicos del ensayo completados",
+    }),
+  ).toHaveAttribute("value", "2");
+  await trial(page, "12.1", "10", "tight");
+  await expect(
+    page.getByText(
+      "Para finalizar todavía falta: X en tolerancia, encastre correcto.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Preparar próximo ensayo" }),
+  ).toHaveClass(/primary/);
+  await expect(
+    page.getByRole("button", { name: "Finalizar calibración" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Preparar próximo ensayo" }).click();
+  await page.getByLabel("Dimensión X medida · mm").fill("12");
+  await page.getByLabel("Dimensión Y medida · mm").fill("10");
+  await page.getByLabel("Encastre del pin").selectOption("correct");
+  await page.getByLabel("Estado de los soportes").selectOption("stable");
+  await expect(
+    page.getByRole("progressbar", {
+      name: "Datos básicos del ensayo completados",
+    }),
+  ).toHaveAttribute("value", "6");
+  await page.getByRole("button", { name: "Guardar y analizar" }).click();
+  await expect(
+    page.getByRole("button", { name: "Finalizar calibración" }),
+  ).toHaveClass(/primary/);
+  await expect(
+    page.getByRole("heading", { name: "Ensayo #2", exact: false }),
+  ).toBeInViewport();
+  await page.getByRole("button", { name: "#1", exact: false }).click();
+  await expect(
+    page.getByText("Estás consultando el ensayo #1", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Finalizar calibración" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Volver al último ensayo" }).click();
+  await expect(
+    page.getByRole("button", { name: "Finalizar calibración" }),
+  ).toBeEnabled();
+});
+test("el formulario móvil permite medir y analizar con controles legibles y sin desbordar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await register(page);
+  await expect(
+    page.getByRole("heading", { name: "Datos de impresión" }),
+  ).toBeVisible();
+  await page.getByLabel("Dimensión X medida · mm").fill("12,030");
+  await page.getByLabel("Dimensión Y medida · mm").fill("9,980");
+  await page.getByLabel("Encastre del pin").selectOption("correct");
+  await page.getByLabel("Estado de los soportes").selectOption("stable");
+  await page.screenshot({
+    path: "/tmp/calibration-guided-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Guardar y analizar" }).click();
+  await expect(
+    page.getByRole("button", { name: "Finalizar calibración" }),
+  ).toBeEnabled();
+  await page.screenshot({
+    path: "/tmp/calibration-guided-result-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("repetir un ensayo aprobado propone verificar y no copia resultados anteriores", async ({
+  page,
+}) => {
+  await register(page);
+  await trial(page, "12", "10");
+  await page
+    .getByRole("button", { name: "Repetir para comprobar", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Una nueva medición" }),
+  ).toBeInViewport();
+  await expect(page.getByLabel("Dimensión X medida · mm")).toHaveValue("");
+  await expect(page.getByLabel("Encastre del pin")).toHaveValue("");
+  await expect(page.getByLabel("Exposición normal · s")).toHaveValue("2.5");
+  const s = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("calibration-hub:v1")!),
+  );
+  expect(s.calibrations[0].trials).toHaveLength(1);
+  expect(s.calibrations[0].completedAt).toBeNull();
+});

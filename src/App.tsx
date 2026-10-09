@@ -84,7 +84,7 @@ function CalibrationList({
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">Todas las calibraciones</option>
               <option value="progress">En progreso</option>
-              <option value="complete">Calibrated</option>
+              <option value="complete">Calibradas</option>
             </select>
           </Field>
           <div className="search">
@@ -157,7 +157,7 @@ function CalibrationList({
                     <td>
                       <Badge tone={c.completedAt ? "good" : "warning"}>
                         {c.completedAt
-                          ? "Calibrated"
+                          ? "Calibrada"
                           : last
                             ? "En progreso"
                             : "Pendiente"}
@@ -372,6 +372,7 @@ export default function App() {
   };
   const completed = store.calibrations.filter((c) => c.completedAt).length;
   const pending = store.calibrations.filter((c) => !c.completedAt).length;
+  const resume = [...store.calibrations].reverse().find((c) => !c.completedAt);
   const active = store.calibrations.find((c) => c.id === activeId);
   const deleteCalibration = (id: string) =>
     setConfirmation({
@@ -491,7 +492,7 @@ export default function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Calibration Hub<span>v1.1</span>
+            Calibration Hub<span>v1.2</span>
           </div>
         </div>
       </aside>
@@ -555,7 +556,9 @@ export default function App() {
                     Tu laboratorio, en orden<span className="title-dot">.</span>
                   </h1>
                   <p>
-                    Medí, ajustá y encontrá el punto exacto de cada impresión.
+                    {resume
+                      ? "Retomá tu ensayo pendiente o empezá una calibración nueva."
+                      : "Elegí tu equipo, registrá una impresión y descubrí qué ajustar."}
                   </p>
                 </div>
               </div>
@@ -563,21 +566,54 @@ export default function App() {
                 <div className="hero-copy">
                   <span className="hero-label">
                     <span />
-                    DE LA MEDICIÓN A LA PRECISIÓN
+                    {resume ? "TU PRÓXIMO PASO" : "EMPEZÁ POR ACÁ"}
                   </span>
                   <h2>
-                    Pequeños ajustes.
-                    <br />
-                    Grandes resultados.
+                    {resume ? (
+                      <>
+                        Retomá donde
+                        <br />
+                        quedaste.
+                      </>
+                    ) : (
+                      <>
+                        Calibrá tu resina.
+                        <br />
+                        Un paso a la vez.
+                      </>
+                    )}
                   </h2>
                   <p>
-                    Elegí o agregá tu impresora y resina en un solo paso.
-                    Después, registrá el ensayo sin cambiar de sección.
+                    {resume ? (
+                      <>
+                        <b>{resume.name}</b>
+                        <br />
+                        {resume.trials.length
+                          ? `${resume.trials.length} ${resume.trials.length === 1 ? "ensayo registrado" : "ensayos registrados"}. Tu historial y ajustes están guardados.`
+                          : "Equipo y resina listos. El próximo paso es registrar tu primera impresión."}
+                      </>
+                    ) : (
+                      <>
+                        Agregá tu impresora y resina juntas. Después, medí la
+                        pieza y te ayudamos a elegir el próximo ajuste.
+                      </>
+                    )}
                   </p>
-                  <button className="btn primary hero-button" onClick={start}>
-                    Nueva calibración
-                    <ArrowUpRight size={18} />
-                  </button>
+                  <div className="hero-actions">
+                    <button
+                      className="btn primary hero-button"
+                      onClick={() => (resume ? open(resume.id) : start())}
+                    >
+                      {resume ? "Continuar calibración" : "Nueva calibración"}
+                      <ArrowUpRight size={18} />
+                    </button>
+                    {resume && (
+                      <button className="btn secondary" onClick={start}>
+                        <Plus size={16} />
+                        Nueva calibración
+                      </button>
+                    )}
+                  </div>
                   <div className="hero-meta">
                     <span>
                       <RulerIcon />
@@ -591,7 +627,7 @@ export default function App() {
                 </div>
                 <div className="hero-art">
                   <div className="art-grid" />
-                  <span className="art-caption">SPECIMEN / 001</span>
+                  <span className="art-caption">BLOQUE + PIN</span>
                   <Piece />
                   <div className="art-footer">
                     <span>PIEZA DE REFERENCIA</span>
@@ -599,151 +635,196 @@ export default function App() {
                   </div>
                 </div>
               </section>
-              <div className="stats-grid">
-                {[
-                  {
-                    label: "Impresoras",
-                    value: store.printers.length,
-                    icon: Printer,
-                    page: "printers",
-                    note: "Equipos en tu laboratorio",
-                  },
-                  {
-                    label: "Resinas",
-                    value: store.resins.length,
-                    icon: Droplets,
-                    page: "resins",
-                    note: "Materiales registrados",
-                  },
-                  {
-                    label: "Calibraciones",
-                    value: store.calibrations.length,
-                    icon: FlaskConical,
-                    page: "calibrations",
-                    note: `${pending} en progreso`,
-                  },
-                  {
-                    label: "Calibrated",
-                    value: completed,
-                    icon: CircleCheck,
-                    page: "calibrations",
-                    note: "Todos los criterios aprobados",
-                  },
-                ].map((s) => (
-                  <article className="stat-card" key={s.label}>
-                    <div>
-                      <span>{s.label}</span>
-                      <s.icon size={19} />
-                    </div>
-                    <strong>{String(s.value).padStart(2, "0")}</strong>
-                    <small>{s.note}</small>
-                  </article>
-                ))}
-              </div>
-              <section className="panel recent-panel">
-                <div className="section-heading">
-                  <div>
-                    <span className="eyebrow">CADA ENSAYO CUENTA</span>
-                    <h3>Calibraciones recientes</h3>
+              {store.calibrations.length > 0 && (
+                <>
+                  <div className="stats-grid">
+                    {[
+                      {
+                        label: "Impresoras",
+                        value: store.printers.length,
+                        icon: Printer,
+                        page: "printers",
+                        note: "Equipos en tu laboratorio",
+                      },
+                      {
+                        label: "Resinas",
+                        value: store.resins.length,
+                        icon: Droplets,
+                        page: "resins",
+                        note: "Materiales registrados",
+                      },
+                      {
+                        label: "Calibraciones",
+                        value: store.calibrations.length,
+                        icon: FlaskConical,
+                        page: "calibrations",
+                        note: `${pending} en progreso`,
+                      },
+                      {
+                        label: "Calibradas",
+                        value: completed,
+                        icon: CircleCheck,
+                        page: "calibrations",
+                        note: "Todos los criterios aprobados",
+                      },
+                    ].map((s) => (
+                      <article className="stat-card" key={s.label}>
+                        <div>
+                          <span>{s.label}</span>
+                          <s.icon size={19} />
+                        </div>
+                        <strong>{String(s.value).padStart(2, "0")}</strong>
+                        <small>{s.note}</small>
+                      </article>
+                    ))}
                   </div>
-                  <button
-                    className="text-btn"
-                    onClick={() => go("calibrations")}
-                  >
-                    Ver todas
-                    <ArrowRight size={15} />
-                  </button>
-                </div>
-                <CalibrationList store={store} onOpen={open} compact />
-              </section>
-              <div className="dashboard-bottom">
-                <section className="panel checklist-panel">
-                  <div className="section-heading">
-                    <div>
-                      <span className="eyebrow">TODO LISTO PARA IMPRIMIR</span>
-                      <h3>
-                        {pending
-                          ? "Tus próximos pasos"
-                          : "Prepará tu primer ensayo"}
-                      </h3>
+                  <section className="panel recent-panel">
+                    <div className="section-heading">
+                      <div>
+                        <span className="eyebrow">CADA ENSAYO CUENTA</span>
+                        <h3>Calibraciones recientes</h3>
+                      </div>
+                      <button
+                        className="text-btn"
+                        onClick={() => go("calibrations")}
+                      >
+                        Ver todas
+                        <ArrowRight size={15} />
+                      </button>
                     </div>
-                    <Clock3 size={20} />
-                  </div>
-                  {pending ? (
-                    <>
-                      <p className="muted">
-                        Tenés {pending} calibraciones con ensayos pendientes de
-                        completar o validar.
-                      </p>
-                      {store.calibrations
-                        .filter((c) => !c.completedAt)
-                        .slice(0, 3)
-                        .map((c) => (
+                    <CalibrationList store={store} onOpen={open} compact />
+                  </section>
+                  <div className="dashboard-bottom">
+                    <section className="panel checklist-panel">
+                      <div className="section-heading">
+                        <div>
+                          <span className="eyebrow">
+                            TODO LISTO PARA IMPRIMIR
+                          </span>
+                          <h3>
+                            {pending
+                              ? "Tus próximos pasos"
+                              : "Volvé a usar tus recetas"}
+                          </h3>
+                        </div>
+                        <Clock3 size={20} />
+                      </div>
+                      {pending ? (
+                        <>
+                          <p className="muted">
+                            Tenés {pending} calibraciones con ensayos pendientes
+                            de completar o validar.
+                          </p>
+                          {store.calibrations
+                            .filter((c) => !c.completedAt)
+                            .slice(0, 3)
+                            .map((c) => (
+                              <button
+                                className="checklist-item"
+                                key={c.id}
+                                onClick={() => open(c.id)}
+                              >
+                                <span className="checklist-circle">
+                                  <FlaskConical size={14} />
+                                </span>
+                                <span>
+                                  {c.name}
+                                  <small>
+                                    {c.trials.length} ensayos ·{" "}
+                                    {c.trials.length
+                                      ? "continuar ajustes"
+                                      : "registrar primer ensayo"}
+                                  </small>
+                                </span>
+                                <ArrowUpRight size={17} />
+                              </button>
+                            ))}
+                        </>
+                      ) : (
+                        <>
+                          <p className="muted">
+                            Tenés {completed}{" "}
+                            {completed === 1
+                              ? "calibración finalizada"
+                              : "calibraciones finalizadas"}
+                            . Sus parámetros están guardados para verificarlos
+                            con otra impresión.
+                          </p>
                           <button
                             className="checklist-item"
-                            key={c.id}
-                            onClick={() => open(c.id)}
+                            onClick={() => go("recipes")}
                           >
                             <span className="checklist-circle">
-                              <FlaskConical size={14} />
+                              <CircleCheck size={15} />
                             </span>
                             <span>
-                              {c.name}
+                              Ver recetas guardadas
                               <small>
-                                {c.trials.length} ensayos ·{" "}
-                                {c.trials.length
-                                  ? "continuar ajustes"
-                                  : "registrar primer ensayo"}
+                                Consultá los ensayos o prepará una nueva
+                                verificación.
                               </small>
                             </span>
                             <ArrowUpRight size={17} />
                           </button>
-                        ))}
-                    </>
-                  ) : (
-                    <>
-                      {[
-                        [
-                          "Elegí equipo y resina",
-                          "Agregalos juntos al crear la calibración.",
-                        ],
-                        [
-                          "Imprimí y medí",
-                          "Guardá parámetros, medidas y encastre.",
-                        ],
-                        [
-                          "Compará y ajustá",
-                          "El historial permanece en la misma calibración.",
-                        ],
-                      ].map(([label, detail], i) => (
-                        <div className="checklist-item" key={label}>
-                          <span className="checklist-circle">{i + 1}</span>
-                          <span>
-                            {label}
-                            <small>{detail}</small>
-                          </span>
+                        </>
+                      )}
+                    </section>
+                    <button className="method-card" onClick={() => go("guide")}>
+                      <BookOpen size={25} strokeWidth={1.5} />
+                      <span className="eyebrow">CONOCÉ EL MÉTODO</span>
+                      <h3>
+                        Entendé qué
+                        <br />
+                        te dice la pieza.
+                      </h3>
+                      <p>
+                        Cómo interpretar X/Y, el encastre y el estado de los
+                        soportes.
+                      </p>
+                      <span className="method-link">
+                        Explorar la guía
+                        <ArrowUpRight size={17} />
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+              {store.calibrations.length === 0 && (
+                <section
+                  className="first-calibration-guide"
+                  aria-label="Cómo empezar"
+                >
+                  <ol>
+                    {[
+                      [
+                        "Elegí tu equipo",
+                        "Impresora y resina en el mismo formulario.",
+                      ],
+                      [
+                        "Imprimí y medí",
+                        "Dos medidas del bloque y el encastre del pin.",
+                      ],
+                      [
+                        "Recibí el próximo ajuste",
+                        "Guardá cada ensayo hasta encontrar tu receta.",
+                      ],
+                    ].map(([title, detail], i) => (
+                      <li key={title}>
+                        <span>{i + 1}</span>
+                        <div>
+                          <h3>{title}</h3>
+                          <p>{detail}</p>
                         </div>
-                      ))}
-                    </>
-                  )}
+                      </li>
+                    ))}
+                  </ol>
+                  <button className="text-btn" onClick={() => go("guide")}>
+                    <BookOpen size={16} />
+                    Ver la guía paso a paso
+                    <ArrowRight size={15} />
+                  </button>
                 </section>
-                <button className="method-card" onClick={() => go("guide")}>
-                  <BookOpen size={25} strokeWidth={1.5} />
-                  <span className="eyebrow">CONOCÉ EL MÉTODO</span>
-                  <h3>
-                    La precisión tiene
-                    <br />
-                    un proceso.
-                  </h3>
-                  <p>
-                    Del encastre al escalado: entendé qué ajustar y por qué.
-                  </p>
-                  <span className="method-link">
-                    Explorar la guía
-                    <ArrowUpRight size={17} />
-                  </span>
-                </button>
-              </div>
+              )}
             </>
           ) : page === "printers" || page === "resins" ? (
             <Catalog
@@ -783,6 +864,7 @@ export default function App() {
             <RecipeLibrary
               store={store}
               onOpen={open}
+              onStart={start}
               onReuse={(id) => {
                 try {
                   const next = reuseRecipe(store, id);
