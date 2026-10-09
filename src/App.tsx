@@ -8,7 +8,6 @@ import {
   Plus,
   ArrowUpRight,
   ArrowRight,
-  Check,
   Download,
   Upload,
   Menu,
@@ -22,14 +21,18 @@ import {
   HardDrive,
   TriangleAlert,
 } from "lucide-react";
-import type { Calibration, Store } from "./domain/types";
+import type { Store } from "./domain/types";
 import { localRepository, parseStore } from "./data/storage";
-import { emptyStore, uid } from "./data/catalog";
+import { emptyStore } from "./data/catalog";
 import { analyze, fmt, REFERENCE } from "./domain/calibration";
 import { Badge, Empty, Field, Logo, Modal, Piece } from "./components/ui";
 import { Catalog, PrinterForm, ResinForm } from "./components/Catalog";
+import { RecipeLibrary } from "./components/RecipeLibrary";
+import { reuseRecipe } from "./domain/recipes";
+import { NewCalibration } from "./components/NewCalibration";
 import { CalibrationDetail } from "./components/CalibrationDetail";
-type Page = "dashboard" | "calibrations" | "printers" | "resins" | "guide";
+type Page =
+  "dashboard" | "calibrations" | "recipes" | "printers" | "resins" | "guide";
 type Dialog = "printer" | "resin" | "calibration" | null;
 function load() {
   try {
@@ -45,101 +48,11 @@ function load() {
 const nav = [
   { id: "dashboard", name: "Vista general", icon: LayoutDashboard },
   { id: "calibrations", name: "Calibraciones", icon: FlaskConical },
+  { id: "recipes", name: "Recetas guardadas", icon: BookOpen },
   { id: "printers", name: "Impresoras", icon: Printer },
   { id: "resins", name: "Resinas", icon: Droplets },
   { id: "guide", name: "Guía de calibración", icon: BookOpen },
 ] as const;
-function NewCalibration({
-  store,
-  onSave,
-  onClose,
-}: {
-  store: Store;
-  onSave: (c: Calibration) => void;
-  onClose: () => void;
-}) {
-  const [printerId, setPrinter] = useState(store.printers[0]?.id ?? ""),
-    [resinId, setResin] = useState(store.resins[0]?.id ?? ""),
-    [name, setName] = useState("");
-  return (
-    <Modal
-      title="Busquemos la precisión."
-      subtitle="Una calibración reúne todos los ensayos de un equipo y una resina."
-      onClose={onClose}
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!printerId || !resinId || !name.trim()) return;
-          onSave({
-            id: uid(),
-            printerId,
-            resinId,
-            name: name.trim(),
-            createdAt: new Date().toISOString(),
-            completedAt: null,
-            trials: [],
-          });
-        }}
-      >
-        <Field label="Nombre de la calibración">
-          <input
-            required
-            maxLength={100}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Ajuste dimensional · Aqua Gray"
-          />
-        </Field>
-        <Field label="Impresora">
-          <select
-            required
-            value={printerId}
-            onChange={(e) => setPrinter(e.target.value)}
-          >
-            <option value="">Seleccioná tu equipo</option>
-            {store.printers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} · {store.models.find((m) => m.id === p.modelId)?.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Resina">
-          <select
-            required
-            value={resinId}
-            onChange={(e) => setResin(e.target.value)}
-          >
-            <option value="">Seleccioná la resina</option>
-            {store.resins.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.manufacturer} · {r.name} ({r.color})
-              </option>
-            ))}
-          </select>
-        </Field>
-        {(!store.printers.length || !store.resins.length) && (
-          <div className="notice warning">
-            Registrá al menos una impresora y una resina en sus catálogos antes
-            de comenzar.
-          </div>
-        )}
-        <div className="form-note">
-          <ShieldCheck size={16} />
-          Tolerancia de referencia: ±0,050 mm · CHITUBOX
-        </div>
-        <button
-          className="btn primary full"
-          disabled={!store.printers.length || !store.resins.length}
-        >
-          Comenzar calibración
-          <ArrowRight size={17} />
-        </button>
-      </form>
-    </Modal>
-  );
-}
 function CalibrationList({
   store,
   onOpen,
@@ -167,22 +80,13 @@ function CalibrationList({
     <>
       {!compact && (
         <div className="list-toolbar">
-          <div className="segmented" aria-label="Estado de calibración">
-            {[
-              ["all", "Todas"],
-              ["progress", "En progreso"],
-              ["complete", "Calibrated"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                aria-pressed={filter === id}
-                className={filter === id ? "active" : ""}
-                onClick={() => setFilter(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Field label="Estado de calibración">
+            <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+              <option value="all">Todas las calibraciones</option>
+              <option value="progress">En progreso</option>
+              <option value="complete">Calibrated</option>
+            </select>
+          </Field>
           <div className="search">
             <Search size={17} />
             <input
@@ -311,8 +215,7 @@ function Guide() {
             {[
               ["Dimensión X", "12,000 mm"],
               ["Dimensión Y", "10,000 mm"],
-              ["Pines", "7,000 / 5,000 mm"],
-              ["Alojamientos", "7,100 / 5,100 mm"],
+              ["Encastre", "Un pin · un alojamiento central"],
               ["Tolerancia", "±0,050 mm"],
             ].map(([label, value]) => (
               <div key={label}>
@@ -330,7 +233,7 @@ function Guide() {
             ],
             [
               "Medí con cuidado",
-              "Aplicá siempre el mismo procedimiento de lavado y curado. Medí X e Y, probá ambos pines y revisá los soportes.",
+              "Aplicá siempre el mismo procedimiento de lavado y curado. Medí X e Y, probá el encastre del pin y revisá los soportes.",
             ],
             [
               "Resolvé el encastre",
@@ -342,7 +245,7 @@ function Guide() {
             ],
             [
               "Confirmá el resultado",
-              "Para finalizar, el último ensayo debe aprobar X e Y dentro de ±0,050 mm, ambos encastres y los soportes.",
+              "Para finalizar, el último ensayo debe aprobar X e Y dentro de ±0,050 mm, el encastre del pin y los soportes.",
             ],
           ].map(([title, detail], i) => (
             <article key={title}>
@@ -422,16 +325,7 @@ export default function App() {
     window.scrollTo({ top: 0 });
   };
   const start = () => {
-    if (!store.printers.length) {
-      notify("Primero registrá tu impresora.");
-      setDialog("printer");
-      return;
-    }
-    if (!store.resins.length) {
-      notify("Agregá la resina que vas a utilizar.");
-      setDialog("resin");
-      return;
-    }
+    setMobile(false);
     setDialog("calibration");
   };
   const exportData = () => {
@@ -538,20 +432,45 @@ export default function App() {
           MI LABORATORIO<span className="workspace-tag">LOCAL</span>
         </div>
         <nav>
-          {nav.map(({ id, name, icon: Icon }) => (
-            <button
-              className={`nav-item ${page === id ? "active" : ""}`}
-              key={id}
-              onClick={() => go(id)}
-            >
-              <Icon size={19} />
-              <span>{name}</span>
-              {id === "calibrations" && store.calibrations.length > 0 && (
-                <i>{store.calibrations.length}</i>
-              )}
-            </button>
-          ))}
+          {nav
+            .filter(
+              (item) =>
+                item.id === "dashboard" ||
+                item.id === "calibrations" ||
+                item.id === "recipes",
+            )
+            .map(({ id, name, icon: Icon }) => (
+              <button
+                className={`nav-item ${page === id ? "active" : ""}`}
+                key={id}
+                onClick={() => go(id)}
+              >
+                <Icon size={19} />
+                <span>{name}</span>
+                {id === "calibrations" && store.calibrations.length > 0 && (
+                  <i>{store.calibrations.length}</i>
+                )}
+              </button>
+            ))}
         </nav>
+        <div className="catalog-navigation">
+          <Field label="Catálogo">
+            <select
+              value={page === "printers" || page === "resins" ? page : ""}
+              onChange={(e) => {
+                if (e.target.value) go(e.target.value as Page);
+              }}
+            >
+              <option value="">Equipo y materiales</option>
+              <option value="printers">Impresoras</option>
+              <option value="resins">Resinas</option>
+            </select>
+          </Field>
+          <button className="text-btn" onClick={() => go("guide")}>
+            <BookOpen size={15} />
+            Guía de calibración
+          </button>
+        </div>
         <div className="sidebar-bottom">
           <div className="local-card">
             <HardDrive size={20} />
@@ -572,7 +491,7 @@ export default function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Calibration Hub<span>v1.0</span>
+            Calibration Hub<span>v1.1</span>
           </div>
         </div>
       </aside>
@@ -639,10 +558,6 @@ export default function App() {
                     Medí, ajustá y encontrá el punto exacto de cada impresión.
                   </p>
                 </div>
-                <button className="btn primary" onClick={start}>
-                  <Plus size={18} />
-                  Nueva calibración
-                </button>
               </div>
               <section className="hero">
                 <div className="hero-copy">
@@ -656,11 +571,11 @@ export default function App() {
                     Grandes resultados.
                   </h2>
                   <p>
-                    Un método claro para calibrar tu impresora de resina. Cada
-                    ensayo te acerca a una pieza que encaja.
+                    Elegí o agregá tu impresora y resina en un solo paso.
+                    Después, registrá el ensayo sin cambiar de sección.
                   </p>
-                  <button className="btn hero-button" onClick={start}>
-                    Comenzar una calibración
+                  <button className="btn primary hero-button" onClick={start}>
+                    Nueva calibración
                     <ArrowUpRight size={18} />
                   </button>
                   <div className="hero-meta">
@@ -715,21 +630,14 @@ export default function App() {
                     note: "Todos los criterios aprobados",
                   },
                 ].map((s) => (
-                  <button
-                    className="stat-card"
-                    key={s.label}
-                    onClick={() => go(s.page as Page)}
-                  >
+                  <article className="stat-card" key={s.label}>
                     <div>
                       <span>{s.label}</span>
                       <s.icon size={19} />
                     </div>
                     <strong>{String(s.value).padStart(2, "0")}</strong>
-                    <small>
-                      {s.note}
-                      <ArrowUpRight size={14} />
-                    </small>
-                  </button>
+                    <small>{s.note}</small>
+                  </article>
                 ))}
               </div>
               <section className="panel recent-panel">
@@ -795,41 +703,26 @@ export default function App() {
                   ) : (
                     <>
                       {[
-                        {
-                          ready: store.printers.length > 0,
-                          label: "Registrá tu impresora",
-                          detail: "Tu marca, modelo y equipo",
-                          action: () => setDialog("printer"),
-                        },
-                        {
-                          ready: store.resins.length > 0,
-                          label: "Elegí tu resina",
-                          detail: "El material con el que vas a trabajar",
-                          action: () => setDialog("resin"),
-                        },
-                        {
-                          ready: store.calibrations.length > 0,
-                          label: "Comenzá una calibración",
-                          detail: "Un ensayo. Un punto de partida.",
-                          action: start,
-                        },
-                      ].map((item, i) => (
-                        <button
-                          className="checklist-item"
-                          onClick={item.action}
-                          key={item.label}
-                        >
-                          <span
-                            className={`checklist-circle ${item.ready ? "done" : ""}`}
-                          >
-                            {item.ready ? <Check size={15} /> : i + 1}
-                          </span>
+                        [
+                          "Elegí equipo y resina",
+                          "Agregalos juntos al crear la calibración.",
+                        ],
+                        [
+                          "Imprimí y medí",
+                          "Guardá parámetros, medidas y encastre.",
+                        ],
+                        [
+                          "Compará y ajustá",
+                          "El historial permanece en la misma calibración.",
+                        ],
+                      ].map(([label, detail], i) => (
+                        <div className="checklist-item" key={label}>
+                          <span className="checklist-circle">{i + 1}</span>
                           <span>
-                            {item.label}
-                            <small>{item.detail}</small>
+                            {label}
+                            <small>{detail}</small>
                           </span>
-                          <ArrowUpRight size={17} />
-                        </button>
+                        </div>
                       ))}
                     </>
                   )}
@@ -843,7 +736,7 @@ export default function App() {
                     un proceso.
                   </h3>
                   <p>
-                    De los pines al escalado: entendé qué ajustar y por qué.
+                    Del encastre al escalado: entendé qué ajustar y por qué.
                   </p>
                   <span className="method-link">
                     Explorar la guía
@@ -885,6 +778,28 @@ export default function App() {
                   },
                 })
               }
+            />
+          ) : page === "recipes" ? (
+            <RecipeLibrary
+              store={store}
+              onOpen={open}
+              onReuse={(id) => {
+                try {
+                  const next = reuseRecipe(store, id);
+                  if (persist(next.store)) {
+                    open(next.calibration.id);
+                    notify(
+                      "Receta preparada. Registrá un nuevo ensayo para verificarla.",
+                    );
+                  }
+                } catch (error) {
+                  notify(
+                    error instanceof Error
+                      ? error.message
+                      : "No se pudo reutilizar la receta.",
+                  );
+                }
+              }}
             />
           ) : page === "guide" ? (
             <Guide />
@@ -943,7 +858,9 @@ export default function App() {
             if (persist(s)) {
               setDialog(null);
               notify("Impresora registrada.");
+              return true;
             }
+            return false;
           }}
         />
       )}{" "}
@@ -955,7 +872,9 @@ export default function App() {
             if (persist(s)) {
               setDialog(null);
               notify("Resina registrada.");
+              return true;
             }
+            return false;
           }}
         />
       )}{" "}
@@ -963,13 +882,13 @@ export default function App() {
         <NewCalibration
           store={store}
           onClose={closeDialog}
-          onSave={(c) => {
-            if (
-              persist({ ...store, calibrations: [...store.calibrations, c] })
-            ) {
+          onSave={(next, id) => {
+            if (persist(next)) {
               setDialog(null);
-              open(c.id);
+              open(id);
+              return true;
             }
+            return false;
           }}
         />
       )}{" "}

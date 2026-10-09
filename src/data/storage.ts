@@ -1,6 +1,7 @@
 import type { Store } from "../domain/types";
-import { emptyStore } from "./catalog";
-import { analyze, validateTrial } from "../domain/calibration";
+import { BRANDS, emptyStore, withCurrentCatalog } from "./catalog";
+import { validContext, PROTOCOL_VERSION } from "../domain/protocol";
+import { analyze, validateTrial, validMethod } from "../domain/calibration";
 const KEY = "calibration-hub:v1";
 export interface Repository {
   load(): Store;
@@ -23,6 +24,8 @@ export function parseStore(raw: string): Store {
     !Array.isArray(s.calibrations)
   )
     throw new Error("Formato de respaldo no compatible.");
+  if (s.sourceId !== undefined && !text(s.sourceId))
+    throw new Error("Origen del respaldo inválido.");
   const ids = new Set<string>();
   const checkId = (v: unknown) => {
     if (!text(v) || ids.has(v))
@@ -33,13 +36,7 @@ export function parseStore(raw: string): Store {
     if (
       !record(m) ||
       !text(m.name) ||
-      ![
-        "Phrozen",
-        "Anycubic",
-        "Elegoo",
-        "Creality",
-        "PioCreat / Aidis",
-      ].includes(String(m.brand)) ||
+      !BRANDS.includes(m.brand as Store["models"][number]["brand"]) ||
       !["catalog", "pending"].includes(String(m.validation))
     )
       throw new Error("Modelo inválido.");
@@ -64,13 +61,53 @@ export function parseStore(raw: string): Store {
       !record(c) ||
       !text(c.name) ||
       !text(c.createdAt) ||
+      !Number.isFinite(Date.parse(c.createdAt)) ||
       !s.printers.some((p) => p.id === c.printerId) ||
       !s.resins.some((r) => r.id === c.resinId) ||
       !Array.isArray(c.trials) ||
-      !(c.completedAt === null || text(c.completedAt))
+      !(
+        c.completedAt === null ||
+        (text(c.completedAt) &&
+          Number.isFinite(Date.parse(c.completedAt)) &&
+          Date.parse(c.completedAt) >= Date.parse(String(c.createdAt)))
+      )
     )
       throw new Error("Calibración inválida.");
     checkId(c.id);
+    if (c.context !== undefined && !validContext(c.context))
+      throw new Error("Procedimiento de calibración inválido.");
+    if (c.startingPoint !== undefined) {
+      const seed = c.startingPoint;
+      if (
+        !record(seed) ||
+        !text(seed.calibrationId) ||
+        !text(seed.trialId) ||
+        !(seed.sourceId === null || text(seed.sourceId)) ||
+        seed.protocolVersion !== PROTOCOL_VERSION ||
+        !record(seed.parameters)
+      )
+        throw new Error("Origen de la receta inválido.");
+      const parameters = seed.parameters;
+      for (const key of ["exposure", "layer", "scaleX", "scaleY"] as const)
+        if (
+          typeof parameters[key] !== "number" ||
+          !Number.isFinite(parameters[key]) ||
+          parameters[key] <= 0
+        )
+          throw new Error("Parámetros de la receta inválidos.");
+      if (
+        Number(parameters.layer) > 1 ||
+        ["compensationA", "compensationB"].some(
+          (key) =>
+            typeof parameters[key] !== "number" ||
+            !Number.isFinite(parameters[key]),
+        )
+      )
+        throw new Error("Parámetros de la receta inválidos.");
+    }
+    if (c.method !== undefined && !validMethod(c.method))
+      throw new Error("Parámetros del método inválidos.");
+
     for (const t of c.trials) {
       if (
         !record(t) ||
@@ -98,7 +135,14 @@ export function parseStore(raw: string): Store {
 export const localRepository: Repository = {
   load() {
     const raw = localStorage.getItem(KEY);
-    return raw ? parseStore(raw) : emptyStore();
+    const store = raw ? withCurrentCatalog(parseStore(raw)) : emptyStore();
+    if (!store.sourceId) {
+      const id =
+        localStorage.getItem("calibration-hub:source") ?? crypto.randomUUID();
+      localStorage.setItem("calibration-hub:source", id);
+      return { ...store, sourceId: id };
+    }
+    return store;
   },
   save(store) {
     localStorage.setItem(KEY, JSON.stringify(store));

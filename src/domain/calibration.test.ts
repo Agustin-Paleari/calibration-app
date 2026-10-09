@@ -4,10 +4,12 @@ import {
   dimension,
   externalCompensation,
   internalCompensation,
-  recommend,
   validateTrial,
 } from "./calibration";
+import { recommendRound } from "./recommendations";
 import type { Trial } from "./types";
+const recommend = (t: Trial, previous?: Trial) =>
+  recommendRound(previous ? [previous, t] : [t]);
 const trial: Trial = {
   id: "trial",
   date: "2026-10-08",
@@ -15,8 +17,7 @@ const trial: Trial = {
   layer: 0.05,
   x: 12,
   y: 10,
-  pin7: "correct",
-  pin5: "correct",
+  pin: "correct",
   supports: "stable",
   notes: "",
   scaleX: 100,
@@ -59,26 +60,26 @@ describe("Precisión dimensional", () => {
   });
 });
 describe("Validación y recomendaciones", () => {
-  it("exige dimensiones, ambos pines y soportes para aprobar", () => {
+  it("exige dimensiones, encastre correcto y soportes para aprobar", () => {
     expect(analyze(trial).passed).toBe(true);
     for (const patch of [
       { x: 12.06 },
       { y: 10.06 },
-      { pin7: "tight" as const },
-      { pin5: "loose" as const },
+      { pin: "tight" as const },
+      { pin: "loose" as const },
       { supports: "failed" as const },
     ])
       expect(analyze({ ...trial, ...patch }).passed).toBe(false);
   });
   it("sugiere aumentar exposición por pines sueltos", () => {
-    expect(recommend({ ...trial, pin5: "loose" }).nextExposure).toBe(2.625);
+    expect(recommend({ ...trial, pin: "loose" }).nextExposure).toBe(2.6);
   });
   it("sugiere bajar exposición por pines ajustados con soportes estables", () => {
-    expect(recommend({ ...trial, pin7: "tight" }).nextExposure).toBe(2.375);
+    expect(recommend({ ...trial, pin: "tight" }).nextExposure).toBe(2.4);
   });
   it("prioriza soportes fallidos y advierte de una reducción previa", () => {
     const r = recommend(
-      { ...trial, exposure: 2, pin7: "tight", supports: "failed" },
+      { ...trial, exposure: 2, pin: "tight", supports: "failed" },
       trial,
     );
     expect(r.nextExposure).toBe(2.5);
@@ -86,19 +87,18 @@ describe("Validación y recomendaciones", () => {
   });
   it("no sigue bajando exposición si no hay ensayo anterior estable", () => {
     expect(
-      recommend({ ...trial, supports: "failed", pin7: "tight" }).nextExposure,
+      recommend({ ...trial, supports: "failed", pin: "tight" }).nextExposure,
     ).toBe(2.5);
   });
   it("mantiene exposición ante señales de encastre opuestas", () => {
     expect(
-      recommend({ ...trial, pin7: "tight", pin5: "loose" }).nextExposure,
+      recommend({ ...trial, pin: undefined, pin7: "tight", pin5: "loose" })
+        .nextExposure,
     ).toBe(2.5);
   });
   it("mantiene exposición con encastre estable y error dimensional", () => {
     expect(recommend({ ...trial, x: 12.2 }).nextExposure).toBe(2.5);
-    expect(recommend({ ...trial, x: 12.2 }).title).toContain(
-      "ajustá dimensiones",
-    );
+    expect(recommend({ ...trial, x: 12.2 }).title).toContain("ajustá");
   });
   it("rechaza datos incompletos y acepta un ensayo válido", () => {
     expect(validateTrial(trial)).toBeNull();
@@ -109,7 +109,7 @@ describe("Validación y recomendaciones", () => {
       { scaleX: 0 },
       { compensationA: Infinity },
       { date: "" },
-      { pin7: "" as Trial["pin7"] },
+      { pin: "" as Trial["pin"] },
     ])
       expect(validateTrial({ ...trial, ...patch })).not.toBeNull();
   });
@@ -118,4 +118,20 @@ it("rechaza fechas inexistentes", () => {
   expect(validateTrial({ ...trial, date: "2026-02-30" })).toContain(
     "fecha válida",
   );
+});
+it("el ensayo nuevo necesita solo X, Y y un encastre, sin diámetros", () => {
+  expect(validateTrial(trial)).toBeNull();
+  expect(analyze(trial).passed).toBe(true);
+  expect(analyze({ ...trial, pin: "tight" }).passed).toBe(false);
+  expect(analyze({ ...trial, pin: "loose" }).passed).toBe(false);
+});
+it("conserva el análisis de registros anteriores sin inventar un encastre único", () => {
+  const legacy = {
+    ...trial,
+    pin: undefined,
+    pin7: "correct" as const,
+    pin5: "tight" as const,
+  };
+  expect(validateTrial(legacy)).toBeNull();
+  expect(analyze(legacy).fit).toBe(false);
 });

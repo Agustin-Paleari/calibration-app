@@ -11,18 +11,33 @@ import {
   TriangleAlert,
   ChevronDown,
 } from "lucide-react";
-import type { Calibration, Store, Trial, Fit, Supports } from "../domain/types";
+import type {
+  Calibration,
+  Store,
+  Trial,
+  Fit,
+  Supports,
+  Calibration as CalibrationType,
+} from "../domain/types";
 import {
   analyze,
   externalCompensation,
   fmt,
-  internalCompensation,
-  recommend,
   REFERENCE,
   validateTrial,
 } from "../domain/calibration";
+import { defaultContext } from "../domain/protocol";
+import type { TestContext } from "../domain/protocol";
+import { ContextFields } from "./ContextFields";
+import {
+  recommendRound,
+  DEFAULT_METHOD,
+  ENGINE_VERSION,
+} from "../domain/recommendations";
+import type { NextParameters, Recommendation } from "../domain/recommendations";
 import { today, uid } from "../data/catalog";
 import { Badge, Criterion, Field } from "./ui";
+import { MethodSettings } from "./MethodSettings";
 import { Evolution } from "./Charts";
 type Draft = Record<
   | "exposure"
@@ -30,8 +45,7 @@ type Draft = Record<
   | "x"
   | "y"
   | "date"
-  | "pin7"
-  | "pin5"
+  | "pin"
   | "supports"
   | "notes"
   | "scaleX"
@@ -40,27 +54,40 @@ type Draft = Record<
   | "compensationB",
   string
 >;
-function blank(previous?: Trial, next = false, nextExposure?: number): Draft {
+function blank(
+  previous?: Trial,
+  plan?: NextParameters,
+  seed?: CalibrationType["startingPoint"],
+): Draft {
   return {
-    exposure: previous
-      ? String(
-          next
-            ? (nextExposure ?? recommend(previous).nextExposure)
-            : previous.exposure,
-        )
-      : "2.5",
-    layer: previous ? String(previous.layer) : "0.05",
+    exposure: String(
+      plan?.exposure ?? previous?.exposure ?? seed?.parameters.exposure ?? "",
+    ),
+    layer: String(previous?.layer ?? seed?.parameters.layer ?? 0.05),
     x: "",
     y: "",
     date: today(),
-    pin7: "",
-    pin5: "",
+    pin: "",
     supports: "",
     notes: "",
-    scaleX: String(previous?.scaleX ?? 100),
-    scaleY: String(previous?.scaleY ?? 100),
-    compensationA: String(previous?.compensationA ?? 0),
-    compensationB: String(previous?.compensationB ?? 0),
+    scaleX: String(
+      plan?.scaleX ?? previous?.scaleX ?? seed?.parameters.scaleX ?? 100,
+    ),
+    scaleY: String(
+      plan?.scaleY ?? previous?.scaleY ?? seed?.parameters.scaleY ?? 100,
+    ),
+    compensationA: String(
+      plan?.compensationA ??
+        previous?.compensationA ??
+        seed?.parameters.compensationA ??
+        0,
+    ),
+    compensationB: String(
+      plan?.compensationB ??
+        previous?.compensationB ??
+        seed?.parameters.compensationB ??
+        0,
+    ),
   };
 }
 const number = (v: string) =>
@@ -72,19 +99,34 @@ const fitLabels: Record<Fit, string> = {
 };
 function TrialForm({
   previous,
-  nextExposure,
+  suggestion,
+  seed,
+  context,
   onSave,
   onCancel,
 }: {
   previous?: Trial;
-  nextExposure?: number;
+  suggestion?: Recommendation;
+  seed?: CalibrationType["startingPoint"];
+  context?: TestContext;
   onSave: (t: Trial) => boolean;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
-    blank(previous, true, nextExposure),
+    blank(previous, suggestion?.plan, seed),
+  );
+  const [trialContext, setTrialContext] = useState(
+    context ?? previous?.context ?? defaultContext(),
   );
   const [error, setError] = useState("");
+  const [adjustmentsOpen, setAdjustmentsOpen] = useState(
+    !!seed || !!suggestion?.changes.some((c) => c.unit !== "s"),
+  );
+  const [customLayer, setCustomLayer] = useState(
+    ![0.025, 0.03, 0.05, 0.1].includes(
+      previous?.layer ?? seed?.parameters.layer ?? 0.05,
+    ),
+  );
   const change = (key: keyof Draft, value: string) =>
     setDraft({ ...draft, [key]: value });
   const numField = (key: keyof Draft, label: string, hint?: string) => (
@@ -112,11 +154,30 @@ function TrialForm({
         </div>
         <span className="step-pill">01 — Registrar</span>
       </div>
+      {seed && !previous && (
+        <div className="notice">
+          Partimos de una receta guardada. Imprimí y medí una pieza nueva para
+          verificarla; los resultados anteriores permanecen en su calibración.
+        </div>
+      )}
       {previous && (
         <div className="notice">
-          Los resultados se limpiaron. La exposición inicial sugerida es{" "}
-          {fmt(nextExposure ?? recommend(previous).nextExposure)} s; podés
-          modificarla. Los ajustes aplicados se conservan.
+          {suggestion?.changes.length ? (
+            <>
+              Sugerencia preparada:{" "}
+              {suggestion.changes
+                .map(
+                  (change) =>
+                    `${change.label} ${fmt(change.after)} ${change.unit}`,
+                )
+                .join(" · ")}
+              . Revisá los parámetros antes de imprimir.
+            </>
+          ) : (
+            <>Conservamos los parámetros del último ensayo.</>
+          )}{" "}
+          Las medidas, el encastre y los soportes quedaron vacíos; el historial
+          se conserva.
         </div>
       )}
       <form
@@ -129,10 +190,10 @@ function TrialForm({
             layer: number(draft.layer),
             x: number(draft.x),
             y: number(draft.y),
-            pin7: draft.pin7 as Fit,
-            pin5: draft.pin5 as Fit,
+            pin: draft.pin as Fit,
             supports: draft.supports as Supports,
             notes: draft.notes.trim(),
+            context: trialContext,
             scaleX: number(draft.scaleX),
             scaleY: number(draft.scaleY),
             compensationA: number(draft.compensationA),
@@ -153,9 +214,40 @@ function TrialForm({
           <SlidersHorizontal size={16} />
           Parámetros de impresión
         </h4>
-        <div className="form-grid three">
-          {numField("exposure", "Exposición normal · s")}
-          {numField("layer", "Altura de capa · mm")}
+        <div className="form-grid">
+          {numField(
+            "exposure",
+            "Exposición normal · s",
+            !previous && !seed
+              ? "Usá el valor inicial recomendado por el fabricante para tu impresora y altura de capa."
+              : undefined,
+          )}
+          <Field label="Altura de capa · mm">
+            <select
+              value={customLayer ? "custom" : draft.layer}
+              onChange={(e) => {
+                if (e.target.value === "custom") {
+                  setCustomLayer(true);
+                  change("layer", "");
+                } else {
+                  setCustomLayer(false);
+                  change("layer", e.target.value);
+                }
+              }}
+            >
+              {[0.025, 0.03, 0.05, 0.1].map((value) => (
+                <option key={value} value={value}>
+                  {fmt(value)} mm
+                </option>
+              ))}
+              <option value="custom">Otra altura de capa</option>
+            </select>
+          </Field>
+          {customLayer &&
+            numField("layer", "Altura de capa personalizada · mm")}
+        </div>
+        <details className="setup-optional trial-date">
+          <summary>Fecha del ensayo · {draft.date}</summary>
           <Field label="Fecha del ensayo">
             <input
               required
@@ -164,7 +256,7 @@ function TrialForm({
               onChange={(e) => change("date", e.target.value)}
             />
           </Field>
-        </div>
+        </details>
         <h4 className="form-section">
           <Ruler size={16} />
           Resultados de la pieza
@@ -173,24 +265,19 @@ function TrialForm({
           {numField("x", "Dimensión X medida · mm", "Nominal: 12,000 mm")}
           {numField("y", "Dimensión Y medida · mm", "Nominal: 10,000 mm")}
         </div>
-        <div className="form-grid three">
-          {(["pin7", "pin5"] as const).map((key) => (
-            <Field
-              key={key}
-              label={`Encastre del pin ${key === "pin7" ? "7" : "5"} mm`}
+        <div className="form-grid">
+          <Field label="Encastre del pin">
+            <select
+              required
+              value={draft.pin}
+              onChange={(e) => change("pin", e.target.value)}
             >
-              <select
-                required
-                value={draft[key]}
-                onChange={(e) => change(key, e.target.value)}
-              >
-                <option value="">Seleccioná el resultado</option>
-                <option value="correct">Correcto</option>
-                <option value="tight">Demasiado ajustado</option>
-                <option value="loose">Suelto</option>
-              </select>
-            </Field>
-          ))}
+              <option value="">Seleccioná el resultado</option>
+              <option value="correct">Entra con ajuste correcto</option>
+              <option value="tight">No entra o queda demasiado ajustado</option>
+              <option value="loose">Entra suelto</option>
+            </select>
+          </Field>
           <Field label="Estado de los soportes">
             <select
               required
@@ -199,11 +286,16 @@ function TrialForm({
             >
               <option value="">Seleccioná el resultado</option>
               <option value="stable">Estables · resistieron</option>
+              <option value="partial">Separación parcial</option>
               <option value="failed">Fallaron</option>
             </select>
           </Field>
         </div>
-        <details className="adjustments">
+        <details
+          className="adjustments"
+          open={adjustmentsOpen}
+          onToggle={(e) => setAdjustmentsOpen(e.currentTarget.open)}
+        >
           <summary>
             Ajustes aplicados en CHITUBOX <ChevronDown size={16} />
           </summary>
@@ -218,15 +310,22 @@ function TrialForm({
             {numField("compensationB", "B · compensación externa · mm")}
           </div>
         </details>
-        <Field label="Observaciones">
-          <textarea
-            rows={3}
-            maxLength={2000}
-            value={draft.notes}
-            onChange={(e) => change("notes", e.target.value)}
-            placeholder="Lavado, curado, cambios aplicados o algo que quieras recordar…"
-          />
-        </Field>
+        <details className="setup-optional">
+          <summary>Observaciones · opcional</summary>{" "}
+          <Field label="Observaciones">
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={draft.notes}
+              onChange={(e) => change("notes", e.target.value)}
+              placeholder="Lavado, curado, cambios aplicados o algo que quieras recordar…"
+            />
+          </Field>
+        </details>
+        <details className="setup-optional">
+          <summary>Procedimiento del ensayo · opcional</summary>
+          <ContextFields context={trialContext} onChange={setTrialContext} />
+        </details>
         {error && (
           <p className="error" role="alert">
             {error}
@@ -251,8 +350,6 @@ function TrialForm({
 function Compensation({ trial }: { trial: Trial }) {
   const a = analyze(trial),
     b = externalCompensation(trial);
-  const [hole7, setHole7] = useState(""),
-    [hole5, setHole5] = useState("");
   return (
     <div className="panel compensation">
       <div className="section-heading">
@@ -267,8 +364,8 @@ function Compensation({ trial }: { trial: Trial }) {
           <span className="mechanism-index">01</span>
           <h4>Exposición</h4>
           <p>
-            Modifica el curado y el encastre. Resolvé pines y soportes antes de
-            ajustar dimensiones.
+            Modifica el curado y el encastre. Resolvé el encastre y los soportes
+            antes de ajustar dimensiones.
           </p>
         </div>
         <div>
@@ -315,48 +412,16 @@ function Compensation({ trial }: { trial: Trial }) {
       </div>
       <details className="adjustments">
         <summary>
-          A · Calcular compensación interna
+          A · Comprender la compensación interna
           <ChevronDown size={16} />
         </summary>
         <p className="muted">
-          El encastre por sí solo no permite calcular A. Medí los alojamientos:
-          el desplazamiento geométrico por pared es (nominal − medido) ÷ 2.
+          A modifica el contorno del hueco. El resultado de encastre (correcto,
+          ajustado o suelto) no permite calcular un valor numérico de A. Primero
+          estabilizá la exposición y los soportes; si necesitás probar A,
+          realizá un cambio controlado en CHITUBOX y verificá nuevamente el
+          encastre. No se requiere medir el pin ni el alojamiento.
         </p>
-        <div className="form-grid">
-          {[
-            {
-              label: "Alojamiento 7,10 mm",
-              value: hole7,
-              set: setHole7,
-              nominal: REFERENCE.hole7,
-            },
-            {
-              label: "Alojamiento 5,10 mm",
-              value: hole5,
-              set: setHole5,
-              nominal: REFERENCE.hole5,
-            },
-          ].map((h) => (
-            <div key={h.label}>
-              <Field label={`${h.label} · medida real`}>
-                <input
-                  inputMode="decimal"
-                  value={h.value}
-                  onChange={(e) => h.set(e.target.value)}
-                  placeholder="mm"
-                />
-              </Field>
-              {Number.isFinite(number(h.value)) && number(h.value) > 0 ? (
-                <p className="calc-result">
-                  {fmt(internalCompensation(number(h.value), h.nominal))} mm por
-                  pared
-                </p>
-              ) : (
-                h.value && <p className="error">Ingresá una medida positiva.</p>
-              )}
-            </div>
-          ))}
-        </div>
       </details>
       <p className="footnote">
         <TriangleAlert size={14} />
@@ -390,7 +455,12 @@ export function CalibrationDetail({
   const current = c.trials.find((t) => t.id === selected) ?? last;
   const index = current ? c.trials.indexOf(current) : 0;
   const a = current ? analyze(current) : null;
-  const rec = current ? recommend(current, c.trials[index - 1]) : null;
+  const rec = current
+    ? recommendRound(c.trials.slice(0, index + 1), current.method ?? c.method)
+    : null;
+  const latestSuggestion = last
+    ? recommendRound(c.trials, c.method)
+    : undefined;
   return (
     <>
       <button className="back-btn" onClick={onBack}>
@@ -415,35 +485,58 @@ export function CalibrationDetail({
           {c.completedAt ? "Calibrated" : "En progreso"}
         </Badge>
       </div>
+      <div className="calibration-stage">
+        <Badge tone="neutral">
+          Etapa:{" "}
+          {latestSuggestion?.stage === "dimensional"
+            ? "Ajuste dimensional"
+            : "Exposición"}
+        </Badge>
+        {latestSuggestion?.lockedExposure !== null &&
+          latestSuggestion?.lockedExposure !== undefined && (
+            <span>
+              Exposición funcional: {fmt(latestSuggestion.lockedExposure)} s
+            </span>
+          )}
+      </div>
       <div className="workflow-strip">
-        {[
-          "Registrar ensayo",
-          "Analizar resultados",
-          "Ajustar y comparar",
-          "Finalizar",
-        ].map((s, i) => (
-          <span
-            className={c.completedAt || (!form && i < 3) ? "active" : ""}
-            key={s}
-          >
-            <i>{c.completedAt ? <Check size={12} /> : `0${i + 1}`}</i>
-            {s}
-            {i < 3 && <ArrowRight size={14} />}
-          </span>
-        ))}
+        {["Medir", "Analizar", "Repetir si hace falta", "Finalizar"].map(
+          (s, i) => (
+            <span
+              className={c.completedAt || (!form && i < 3) ? "active" : ""}
+              key={s}
+            >
+              <i>{c.completedAt ? <Check size={12} /> : `0${i + 1}`}</i>
+              {s}
+              {i < 3 && <ArrowRight size={14} />}
+            </span>
+          ),
+        )}
       </div>
       {form && !c.completedAt ? (
         <TrialForm
           previous={last}
-          nextExposure={
-            last ? recommend(last, c.trials.at(-2)).nextExposure : undefined
-          }
+          seed={c.startingPoint}
+          suggestion={latestSuggestion}
+          context={last?.context ?? c.context}
           onCancel={() => {
             if (!last) onBack();
             else setForm(false);
           }}
           onSave={(t) => {
-            if (onUpdate({ ...c, trials: [...c.trials, t] })) {
+            if (
+              onUpdate({
+                ...c,
+                trials: [
+                  ...c.trials,
+                  {
+                    ...t,
+                    method: { ...(c.method ?? DEFAULT_METHOD) },
+                    engineVersion: ENGINE_VERSION,
+                  },
+                ],
+              })
+            ) {
               setForm(false);
               setSelected(t.id);
               notify("Ensayo guardado. El análisis ya está disponible.");
@@ -518,7 +611,14 @@ export function CalibrationDetail({
                 label="X e Y · ±0,050 mm"
                 pass={a.x.pass && a.y.pass}
               />
-              <Criterion label="Pines 7 y 5 mm" pass={a.fit} />
+              <Criterion
+                label={
+                  current.pin !== undefined
+                    ? "Encastre del pin"
+                    : "Encastres del registro anterior"
+                }
+                pass={a.fit}
+              />
               <Criterion label="Soportes estables" pass={a.stable} />
             </article>
           </div>
@@ -534,13 +634,65 @@ export function CalibrationDetail({
               <span className="eyebrow">PRÓXIMO PASO SUGERIDO</span>
               <h3>{rec.title}</h3>
               <p>{rec.detail}</p>
+              {rec.changes.length > 0 && (
+                <div className="proposed-changes">
+                  {rec.changes.map((change) => (
+                    <span key={change.label}>
+                      <small>{change.label}</small>
+                      <b>
+                        {fmt(change.before)} <ArrowRight size={12} />{" "}
+                        {fmt(change.after)} {change.unit}
+                      </b>
+                    </span>
+                  ))}
+                </div>
+              )}
               <small>
                 Reglas orientativas para ensayos: no son conclusiones
                 científicas verificadas.
               </small>
             </div>
           </div>
-          <Compensation trial={current} />
+          <details className="analysis-details">
+            <summary>
+              Ajustes dimensionales · escalado y CHITUBOX
+              <ChevronDown size={16} />
+            </summary>
+            <Compensation key={current.id} trial={current} />
+          </details>
+          {current.context && (
+            <details className="analysis-details">
+              <summary>Procedimiento registrado en este ensayo</summary>
+              <div className="recorded-context">
+                <p>
+                  Medición:{" "}
+                  {current.context.measurementStage === "post-cure"
+                    ? "después del curado"
+                    : current.context.measurementStage === "washed"
+                      ? "después del lavado"
+                      : "no registrada"}
+                  . Instrumento:{" "}
+                  {current.context.instrument === "caliper"
+                    ? "calibre"
+                    : current.context.instrument === "micrometer"
+                      ? "micrómetro"
+                      : current.context.instrument === "other"
+                        ? "otro"
+                        : "no registrado"}
+                  .
+                </p>
+                <p>
+                  CHITUBOX:{" "}
+                  {current.context.slicerVersion || "versión no registrada"} ·
+                  Lote: {current.context.resinLot || "no registrado"}
+                </p>
+                <p>
+                  Lavado: {current.context.washMinutes ?? "sin registrar"} min ·
+                  Curado: {current.context.cureMinutes ?? "sin registrar"} min
+                </p>
+              </div>
+            </details>
+          )}
           {current.notes && (
             <div className="panel notes">
               <span className="eyebrow">OBSERVACIONES DEL ENSAYO</span>
@@ -585,6 +737,28 @@ export function CalibrationDetail({
               </button>
             </div>
           )}
+          {c.completedAt && last && (
+            <div className="panel final-recipe">
+              <span className="eyebrow">RECETA FINAL · {resin.name}</span>
+              <div>
+                {[
+                  ["Exposición", last.exposure, "s"],
+                  ["Capa", last.layer, "mm"],
+                  ["Escala X", last.scaleX, "%"],
+                  ["Escala Y", last.scaleY, "%"],
+                  ["A interna", last.compensationA, "mm"],
+                  ["B externa", last.compensationB, "mm"],
+                ].map(([label, value, unit]) => (
+                  <span key={label}>
+                    <small>{label}</small>
+                    <strong>
+                      {fmt(Number(value))} {unit}
+                    </strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {c.completedAt && (
             <div className="notice good">
               <CircleCheck size={18} />
@@ -602,11 +776,19 @@ export function CalibrationDetail({
           )}
         </>
       ) : null}
+      {!c.completedAt && (
+        <MethodSettings
+          method={c.method}
+          onSave={(method) => onUpdate({ ...c, method })}
+        />
+      )}
       {c.trials.length > 0 && (
         <>
-          <div className="panel chart-panel">
-            <Evolution trials={c.trials} />
-          </div>
+          {c.trials.length > 1 && (
+            <div className="panel chart-panel">
+              <Evolution trials={c.trials} />
+            </div>
+          )}
           <div className="panel history-panel">
             <div className="section-heading">
               <div>
@@ -629,7 +811,7 @@ export function CalibrationDetail({
                     <th>Ensayo / fecha</th>
                     <th>Exposición / capa</th>
                     <th>Δ X / Δ Y · mm</th>
-                    <th>Pines 7 / 5</th>
+                    <th>Encastre del pin</th>
                     <th>Soportes</th>
                     <th>A / B · mm</th>
                     <th>Escala X / Y · %</th>
@@ -665,11 +847,19 @@ export function CalibrationDetail({
                           <small>{fmt(r.y.deviation)}</small>
                         </td>
                         <td>
-                          {fitLabels[t.pin7]}
-                          <small>{fitLabels[t.pin5]}</small>
+                          {t.pin !== undefined
+                            ? fitLabels[t.pin]
+                            : `${fitLabels[t.pin7!]} / ${fitLabels[t.pin5!]}`}
+                          {t.pin === undefined && (
+                            <small>Registro anterior · dos encastres</small>
+                          )}
                         </td>
                         <td>
-                          {t.supports === "stable" ? "Estables" : "Fallaron"}
+                          {t.supports === "stable"
+                            ? "Estables"
+                            : t.supports === "partial"
+                              ? "Separación parcial"
+                              : "Fallaron"}
                         </td>
                         <td>
                           {fmt(t.compensationA)}

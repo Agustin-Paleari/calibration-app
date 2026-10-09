@@ -1,7 +1,7 @@
 {
   "name": "calibration-hub",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -9,8 +9,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "format": "prettier --write src tests *.ts *.json *.html README.md",
-    "build:standalone": "npm run build && node scripts/standalone.mjs"
+    "format": "prettier --write src tests scripts/*.ts scripts/*.mjs *.ts *.json *.html README.md docs/*.md",
+    "build:standalone": "npm run build && node scripts/standalone.mjs",
+    "data:import": "node --import tsx scripts/data-import.ts",
+    "data:profiles": "node --import tsx scripts/data-profiles.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
@@ -22,11 +24,13 @@
   "devDependencies": {
     "@playwright/test": "^1.51.0",
     "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^26.6.4",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.4.1",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.15",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.0"

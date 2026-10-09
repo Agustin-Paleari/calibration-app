@@ -6,11 +6,13 @@ export function Modal({
   subtitle,
   children,
   onClose,
+  wide = false,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -55,7 +57,7 @@ export function Modal({
       }}
     >
       <div
-        className="modal"
+        className={`modal ${wide ? "modal-wide" : ""}`}
         ref={ref}
         role="dialog"
         aria-modal="true"
@@ -170,69 +172,78 @@ export function Logo() {
   );
 }
 export function Piece({ large = false }: { large?: boolean }) {
+  const id = useId().replace(/:/g, "");
   return (
     <svg
       className={`piece ${large ? "large" : ""}`}
       viewBox="0 0 460 300"
       role="img"
-      aria-label="Pieza de referencia: X 12 mm, Y 10 mm, pines 7 y 5 mm, alojamientos 7,10 y 5,10 mm"
+      aria-label="Bloque de referencia de 12 por 10 mm, con un único alojamiento central y un pin separado para probar el encastre"
     >
       <defs>
-        <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={`${id}-top`} x1="0" y1="0" x2="1" y2="1">
           <stop stopColor="#a3d9c1" />
           <stop offset="1" stopColor="#59a789" />
         </linearGradient>
-        <linearGradient id="side" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${id}-side`} x1="0" y1="0" x2="0" y2="1">
           <stop stopColor="#4a8f74" />
           <stop offset="1" stopColor="#29634f" />
         </linearGradient>
-        <filter id="shadow">
-          <feGaussianBlur stdDeviation="12" />
+        <filter id={`${id}-shadow`}>
+          <feGaussianBlur stdDeviation="10" />
         </filter>
       </defs>
       <ellipse
-        cx="245"
-        cy="242"
-        rx="137"
-        ry="20"
+        cx="192"
+        cy="234"
+        rx="117"
+        ry="16"
         fill="#0e4436"
         opacity=".15"
-        filter="url(#shadow)"
+        filter={`url(#${id}-shadow)`}
+      />
+      <ellipse
+        cx="368"
+        cy="206"
+        rx="28"
+        ry="9"
+        fill="#0e4436"
+        opacity=".15"
+        filter={`url(#${id}-shadow)`}
       />
       <g stroke="#2c745b" strokeWidth="1.5" strokeLinejoin="round">
-        <path d="M98 159 248 83 377 154 230 236z" fill="url(#top)" />
-        <path d="M98 159v23l132 78v-24z" fill="#3f866c" />
-        <path d="m230 236 147-82v23l-147 83z" fill="url(#side)" />
-        <ellipse cx="284" cy="152" rx="27" ry="15" fill="#275d4a" />
-        <path d="M257 152q27-18 54 0" fill="none" stroke="#bce6d3" />
-        <ellipse cx="239" cy="182" rx="20" ry="12" fill="#275d4a" />
-        <path d="M219 182q20-13 40 0" fill="none" stroke="#bce6d3" />
+        <path d="m66 145 130-71 129 76-129 75z" fill={`url(#${id}-top)`} />
+        <path d="M66 145v24l130 79v-23z" fill="#3f866c" />
+        <path d="m196 225 129-75v24l-129 74z" fill={`url(#${id}-side)`} />
+        <ellipse cx="196" cy="148" rx="35" ry="21" fill="#275d4a" />
+        <path d="M162 151q34-20 68 0" fill="none" stroke="#7fbea1" />
         <path
-          d="M151 148v-38c0-20 57-20 57 0v38c0 21-57 21-57 0"
-          fill="url(#side)"
+          d="M344 190v-51c0-16 49-16 49 0v51c0 17-49 17-49 0"
+          fill={`url(#${id}-side)`}
         />
-        <ellipse cx="179.5" cy="110" rx="28.5" ry="16" fill="url(#top)" />
-        <path
-          d="M211 121V94c0-15 41-15 41 0v27c0 15-41 15-41 0"
-          fill="url(#side)"
+        <ellipse
+          cx="368.5"
+          cy="139"
+          rx="24.5"
+          ry="14"
+          fill={`url(#${id}-top)`}
         />
-        <ellipse cx="231.5" cy="94" rx="20.5" ry="12" fill="url(#top)" />
       </g>
       <g fill="none" stroke="#6a8d7f" strokeWidth="1" strokeDasharray="3 4">
-        <path d="m91 192-14 9 147 84 12-7M389 176l17 10-146 80-15-6M179 88V55h-40M314 151h66V107" />
+        <path d="m58 179-10 9 144 85 13-9M337 177l14 9-133 79M196 122V47h-55M369 120V86h39" />
       </g>
-      <g fill="#355f4e" fontFamily="monospace" fontSize="12">
-        <text x="123" y="261" transform="rotate(30 123 261)">
+      <g fill="#355f4e" fontFamily="monospace" fontSize="11">
+        <text x="99" y="241" transform="rotate(30 99 241)">
           X · 12 mm
         </text>
-        <text x="303" y="258" transform="rotate(-29 303 258)">
+        <text x="257" y="247" transform="rotate(-29 257 247)">
           Y · 10 mm
         </text>
-        <text x="108" y="48">
-          Ø 7 / 5 mm
+        <text x="87" y="40">
+          Alojamiento central
         </text>
-        <text x="330" y="98">
-          7,10 / 5,10
+        <text x="350" y="77">
+          Pin
         </text>
       </g>
     </svg>

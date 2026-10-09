@@ -1,3 +1,4 @@
+import { comparable } from "../domain/protocol";
 import type { Trial } from "../domain/types";
 import { REFERENCE, fmt } from "../domain/calibration";
 export function Evolution({ trials }: { trials: Trial[] }) {
@@ -19,8 +20,16 @@ export function Evolution({ trials }: { trials: Trial[] }) {
       : left + (i * (w - left - right)) / (trials.length - 1);
   const py = (n: number) =>
     top + ((range - n) / (2 * range)) * (h - top - bottom);
+  const changedProcedure = trials.some(
+    (t, i) => i > 0 && !comparable(t, trials[i - 1]),
+  );
   const line = (axis: "x" | "y") =>
-    trials.map((t, i) => `${px(i)},${py(t[axis] - REFERENCE[axis])}`).join(" ");
+    trials
+      .map(
+        (t, i) =>
+          `${i === 0 || !comparable(t, trials[i - 1]) ? "M" : "L"}${px(i)},${py(t[axis] - REFERENCE[axis])}`,
+      )
+      .join(" ");
   return (
     <div className="evolution">
       <div className="section-heading">
@@ -72,18 +81,8 @@ export function Evolution({ trials }: { trials: Trial[] }) {
             </text>
           </g>
         ))}
-        <polyline
-          points={line("x")}
-          fill="none"
-          stroke="#197653"
-          strokeWidth="2.5"
-        />
-        <polyline
-          points={line("y")}
-          fill="none"
-          stroke="#c99243"
-          strokeWidth="2.5"
-        />
+        <path d={line("x")} fill="none" stroke="#197653" strokeWidth="2.5" />
+        <path d={line("y")} fill="none" stroke="#c99243" strokeWidth="2.5" />
         {trials.map((t, i) => (
           <g key={t.id}>
             <circle
@@ -114,6 +113,12 @@ export function Evolution({ trials }: { trials: Trial[] }) {
         <i />
         Franja verde: tolerancia de ±0,050 mm
       </span>
+      {changedProcedure && (
+        <p className="muted">
+          La línea se corta cuando cambia la capa o el procedimiento. Esos
+          ensayos no se usan como referencia de exposición entre sí.
+        </p>
+      )}
       <div className="exposure-evolution">
         <span className="eyebrow">EXPOSICIÓN · SEGUNDOS</span>
         <div>
@@ -121,6 +126,7 @@ export function Evolution({ trials }: { trials: Trial[] }) {
             <span key={t.id}>
               <small>#{i + 1}</small>
               <strong>{fmt(t.exposure)} s</strong>
+              <small>{fmt(t.layer)} mm</small>
             </span>
           ))}
         </div>

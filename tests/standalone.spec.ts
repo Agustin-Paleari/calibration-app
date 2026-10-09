@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { startCalibration } from "./helpers";
 test("paquete autónomo funciona sin descargar recursos externos", async ({
   page,
 }) => {
@@ -18,37 +19,10 @@ test("paquete autónomo funciona sin descargar recursos externos", async ({
     }),
   );
   await page.goto("/standalone.html");
-  await page
-    .getByRole("button", { name: "Nueva calibración", exact: true })
-    .click();
-  await page
-    .getByLabel("Modelo", { exact: true })
-    .selectOption({ label: "Sonic Mini 8K S" });
-  await page.getByLabel("Nombre de tu impresora").fill("Equipo autónomo");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Registrar impresora", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Nueva calibración", exact: true })
-    .click();
-  await page.getByLabel("Fabricante").fill("Phrozen");
-  await page.getByLabel("Nombre de la resina").fill("Aqua");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Registrar resina", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Nueva calibración", exact: true })
-    .click();
-  await page.getByLabel("Nombre de la calibración").fill("Ensayo sin servidor");
-  await page
-    .getByRole("button", { name: "Comenzar calibración", exact: true })
-    .click();
+  await startCalibration(page, "Ensayo sin servidor");
   await page.getByLabel("Dimensión X medida · mm").fill("12");
   await page.getByLabel("Dimensión Y medida · mm").fill("10");
-  await page.getByLabel("Encastre del pin 7 mm").selectOption("correct");
-  await page.getByLabel("Encastre del pin 5 mm").selectOption("correct");
+  await page.getByLabel("Encastre del pin").selectOption("correct");
   await page.getByLabel("Estado de los soportes").selectOption("stable");
   await page.getByRole("button", { name: "Guardar y analizar" }).click();
   await page.getByRole("button", { name: "Finalizar calibración" }).click();

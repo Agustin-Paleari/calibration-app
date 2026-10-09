@@ -6,141 +6,46 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
-import type { Brand, Store, Printer, Resin } from "../domain/types";
-import { BRANDS, uid } from "../data/catalog";
-import { Modal, Field, Badge, Empty } from "./ui";
+import type { Store, Printer, Resin } from "../domain/types";
+import {
+  addPrinter,
+  addResin,
+  newPrinterDraft,
+  newResinDraft,
+} from "../domain/setup";
+import { PrinterFields, ResinFields } from "./SetupFields";
+import { Modal, Badge, Empty } from "./ui";
 export function PrinterForm({
   store,
   onSave,
   onClose,
 }: {
   store: Store;
-  onSave: (s: Store) => void;
+  onSave: (s: Store) => boolean;
   onClose: () => void;
 }) {
-  const [brand, setBrand] = useState<Brand>("Phrozen");
-  const [model, setModel] = useState("");
-  const [custom, setCustom] = useState(false);
-  const [newModel, setNewModel] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
+  const [draft, setDraft] = useState(newPrinterDraft),
+    [error, setError] = useState("");
   return (
     <Modal
       title="Registrá tu impresora"
-      subtitle="Elegí el modelo y dale un nombre a tu equipo."
+      subtitle="Marca y modelo. El nombre del equipo es opcional."
       onClose={onClose}
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          let modelId = model;
-          let models = store.models;
-          if (custom) {
-            const trimmed = newModel.trim();
-            if (!trimmed) {
-              setError("Ingresá el nombre del modelo.");
-              return;
-            }
-            const existing = models.find(
-              (m) =>
-                m.brand === brand &&
-                m.name.toLowerCase() === trimmed.toLowerCase(),
+          try {
+            if (!onSave(addPrinter(store, draft).store))
+              setError("No se pudo guardar. Volvé a intentarlo.");
+          } catch (error) {
+            setError(
+              error instanceof Error ? error.message : "Revisá los datos.",
             );
-            if (existing) modelId = existing.id;
-            else {
-              modelId = uid();
-              models = [
-                ...models,
-                { id: modelId, brand, name: trimmed, validation: "pending" },
-              ];
-            }
           }
-          if (!modelId || !name.trim()) {
-            setError("Seleccioná un modelo y un nombre para el equipo.");
-            return;
-          }
-          onSave({
-            ...store,
-            models,
-            printers: [
-              ...store.printers,
-              { id: uid(), modelId, name: name.trim() },
-            ],
-          });
         }}
       >
-        <Field label="Marca">
-          <select
-            value={brand}
-            onChange={(e) => {
-              setBrand(e.target.value as Brand);
-              setModel("");
-            }}
-          >
-            {BRANDS.map((b) => (
-              <option key={b}>{b}</option>
-            ))}
-          </select>
-        </Field>
-        {brand === "PioCreat / Aidis" && (
-          <p className="form-note">
-            PioCreat y Aidis comparten una familia de catálogo para evitar
-            modelos duplicados.
-          </p>
-        )}
-        {!custom ? (
-          <Field label="Modelo">
-            <select
-              required
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-            >
-              <option value="">Seleccioná un modelo</option>
-              {store.models
-                .filter((m) => m.brand === brand)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                    {m.validation === "pending"
-                      ? " · pendiente de validación"
-                      : ""}
-                  </option>
-                ))}
-            </select>
-          </Field>
-        ) : (
-          <Field label="Nuevo modelo">
-            <input
-              required
-              maxLength={80}
-              value={newModel}
-              onChange={(e) => setNewModel(e.target.value)}
-              placeholder="Nombre del modelo"
-            />
-          </Field>
-        )}
-        <button
-          type="button"
-          className="text-btn"
-          onClick={() => setCustom(!custom)}
-        >
-          {custom ? "Volver al catálogo" : "+ Mi modelo no está en el catálogo"}
-        </button>
-        {custom && (
-          <div className="notice warning">
-            El modelo quedará pendiente de validación administrativa. Podés
-            utilizarlo; esta versión no realiza aprobaciones.
-          </div>
-        )}
-        <Field label="Nombre de tu impresora">
-          <input
-            required
-            maxLength={80}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Saturn del taller"
-          />
-        </Field>
+        <PrinterFields store={store} draft={draft} onChange={setDraft} />
         {error && (
           <p className="error" role="alert">
             {error}
@@ -160,62 +65,36 @@ export function ResinForm({
   onClose,
 }: {
   store: Store;
-  onSave: (s: Store) => void;
+  onSave: (s: Store) => boolean;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(""),
-    [manufacturer, setManufacturer] = useState(""),
-    [color, setColor] = useState("Gris");
+  const [draft, setDraft] = useState(newResinDraft),
+    [error, setError] = useState("");
   return (
     <Modal
       title="Una nueva resina"
-      subtitle="Conservá una referencia de los materiales que usás."
+      subtitle="Elegí el material en los desplegables o agregá uno propio."
       onClose={onClose}
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!name.trim() || !manufacturer.trim() || !color.trim()) return;
-          onSave({
-            ...store,
-            resins: [
-              ...store.resins,
-              {
-                id: uid(),
-                name: name.trim(),
-                manufacturer: manufacturer.trim(),
-                color: color.trim(),
-              },
-            ],
-          });
+          try {
+            if (!onSave(addResin(store, draft).store))
+              setError("No se pudo guardar. Volvé a intentarlo.");
+          } catch (error) {
+            setError(
+              error instanceof Error ? error.message : "Revisá los datos.",
+            );
+          }
         }}
       >
-        <Field label="Fabricante">
-          <input
-            required
-            maxLength={80}
-            value={manufacturer}
-            onChange={(e) => setManufacturer(e.target.value)}
-            placeholder="Ej. Phrozen"
-          />
-        </Field>
-        <Field label="Nombre de la resina">
-          <input
-            required
-            maxLength={100}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Aqua Gray 8K"
-          />
-        </Field>
-        <Field label="Color">
-          <input
-            required
-            maxLength={40}
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          />
-        </Field>
+        <ResinFields draft={draft} onChange={setDraft} />
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <button className="btn primary full">
           Registrar resina
           <Plus size={17} />
