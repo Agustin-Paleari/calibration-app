@@ -20,8 +20,8 @@ const css = readFileSync(`dist${style[1]}`, "utf8").replace(
   },
 );
 html = html
-  .replace(script[0], `<script type="module">${js}</script>`)
-  .replace(style[0], `<style>${css}</style>`);
+  .replace(script[0], () => `<script type="module">${js}</script>`)
+  .replace(style[0], () => `<style>${css}</style>`);
 const favicon = `data:image/svg+xml;base64,${readFileSync("public/favicon.svg").toString("base64")}`;
 html = html.replace('href="/favicon.svg"', `href="${favicon}"`);
 mkdirSync("docs", { recursive: true });
