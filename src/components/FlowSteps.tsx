@@ -1,15 +1,16 @@
 import { Check } from "lucide-react";
 const steps = [
-  ["Equipo y resina", "Elegí qué vas a calibrar"],
-  ["Imprimí y medí", "Registrá tu ensayo"],
-  ["Revisá y ajustá", "Guardá lo que funcionó"],
+  ["Preparar", "Equipo y resina"],
+  ["Medir", "Imprimí y registrá"],
+  ["Resultado", "Revisá el análisis"],
+  ["Repetir / finalizar", "Tu próxima impresión"],
 ];
 export function FlowSteps({
   current,
   complete = false,
   compact = false,
 }: {
-  current: 0 | 1 | 2;
+  current: 0 | 1 | 2 | 3;
   complete?: boolean;
   compact?: boolean;
 }) {

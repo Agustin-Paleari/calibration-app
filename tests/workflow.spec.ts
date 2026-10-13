@@ -69,6 +69,7 @@ test("registro, análisis, siguiente ensayo, validación, persistencia e histori
 });
 test("catálogo PioCreat / Aidis y nuevo modelo pendiente", async ({ page }) => {
   await page.goto("/");
+  await page.getByText("Mi taller", { exact: true }).click();
   await page.getByLabel("Catálogo", { exact: true }).selectOption("printers");
   await page
     .getByRole("button", { name: "Registrar impresora", exact: true })
@@ -90,6 +91,7 @@ test("catálogo PioCreat / Aidis y nuevo modelo pendiente", async ({ page }) => 
     page.getByText("Modelo pendiente", { exact: true }),
   ).toBeVisible();
   await page.reload();
+  await page.getByText("Mi taller", { exact: true }).click();
   await page.getByLabel("Catálogo", { exact: true }).selectOption("printers");
   await expect(page.getByText("Aidis taller", { exact: true })).toBeVisible();
 });
@@ -97,7 +99,9 @@ test("mobile navigation and layout", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Tu laboratorio, en orden." }),
+    page.getByRole("heading", {
+      name: "Calibrá tu combinación de impresora y resina.",
+    }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -108,12 +112,9 @@ test("mobile navigation and layout", async ({ page }) => {
     path: "/tmp/calibration-mobile.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Abrir navegación" }).click();
-  await page
-    .getByRole("button", { name: "Guía de calibración", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Guía", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Menos prueba y error. Más precisión." }),
+    page.getByRole("heading", { name: "Tu primera calibración, paso a paso." }),
   ).toBeVisible();
 });
 test("desktop dashboard", async ({ page }) => {
@@ -340,11 +341,9 @@ test("biblioteca conserva dos exposiciones para la misma combinación y reutiliz
   await page.getByLabel("Exposición normal · s").fill("2.8");
   await trial(page, "12", "10");
   await page.getByRole("button", { name: "Finalizar calibración" }).click();
-  await page
-    .getByRole("button", { name: "Recetas guardadas", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Parámetros", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Recetas de tu taller" }),
+    page.getByRole("heading", { name: "Parámetros guardados" }),
   ).toBeVisible();
   await expect(page.locator(".recipe-card")).toHaveCount(2);
   await expect(page.locator(".recipe-numbers")).toContainText([
@@ -543,6 +542,18 @@ test("el formulario móvil permite medir y analizar con controles legibles y sin
   await expect(
     page.getByRole("button", { name: "Finalizar calibración" }),
   ).toBeEnabled();
+  const heading = page.getByRole("heading", {
+    name: "Ensayo #1",
+    exact: false,
+  });
+  await expect(heading).toBeFocused();
+  const headingBounds = (await heading.boundingBox())!;
+  const stepBounds = (await page
+    .getByRole("list", { name: "Recorrido de calibración" })
+    .boundingBox())!;
+  expect(headingBounds.y).toBeGreaterThanOrEqual(
+    stepBounds.y + stepBounds.height,
+  );
   await page.screenshot({
     path: "/tmp/calibration-guided-result-mobile.png",
     fullPage: true,

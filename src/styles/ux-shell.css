@@ -1,0 +1,1192 @@
+/* UX handoff, phase A: product navigation and a quiet measurement workspace. */
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #233047;
+  background: #f5f7fb;
+  --accent: #4653c7;
+  --accent-dark: #343faa;
+  --ink: #233047;
+  --muted: #647187;
+  --line: #e1e6ef;
+  --cream: #f5f7fb;
+  --model-light: #bbc8f5;
+  --model-medium: #8598de;
+  --model-side: #657ccb;
+  --model-dark: #4058a1;
+}
+.app-shell h1,
+.app-shell h2,
+.app-shell h3 {
+  font-family: inherit;
+  letter-spacing: -0.035em;
+}
+.app-shell .main-wrap {
+  margin-left: 0;
+}
+.app-shell main {
+  max-width: 1240px;
+  padding: 38px 32px 0;
+  min-height: calc(100vh - 88px);
+}
+main:focus {
+  outline: none;
+}
+.skip-link {
+  position: fixed;
+  left: 20px;
+  top: -90px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: white;
+  z-index: 100;
+  color: var(--accent);
+}
+.skip-link:focus {
+  top: 12px;
+}
+.app-header {
+  background: white;
+  border-bottom: 1px solid var(--line);
+}
+.header-inner {
+  max-width: 1304px;
+  margin: auto;
+  min-height: 88px;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+.brand-button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.brand-button .logo-mark {
+  width: 38px;
+  height: 38px;
+  background: var(--accent);
+  color: #edf1ff;
+  box-shadow: none;
+}
+.brand-button .logo-type {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.05;
+}
+.brand-button .logo-dot {
+  color: var(--accent);
+}
+.primary-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-nav-item,
+.header-history {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background: transparent;
+  color: #536079;
+  font-size: 14px;
+  font-weight: 550;
+  min-height: 44px;
+}
+.header-nav-item:hover,
+.header-history:hover {
+  background: #f5f6fb;
+  color: var(--accent);
+}
+.header-nav-item.active,
+.header-history.active {
+  background: #eef0ff;
+  color: var(--accent-dark);
+}
+.header-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.workshop-menu {
+  position: relative;
+}
+.workshop-menu > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 13px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #536079;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.workshop-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.workshop-menu[open] > summary {
+  background: #f2f4fc;
+  color: var(--accent);
+}
+.workshop-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 305px;
+  padding: 22px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 14px 44px #23304724;
+  z-index: 25;
+}
+.workshop-panel > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  width: 100%;
+  text-align: left;
+}
+.workshop-storage {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-top: 18px;
+  color: var(--muted);
+}
+.workshop-storage svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.workshop-storage b {
+  font-size: 12px;
+  color: var(--ink);
+}
+.workshop-storage p {
+  font-size: 12px;
+  margin-top: 5px;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline-color: #7b85ec;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline-color: #7b85ec;
+}
+.app-shell .btn {
+  min-height: 46px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+.app-shell .btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 3px 6px #4653c714;
+}
+.app-shell .btn.primary:hover {
+  background: var(--accent-dark);
+  box-shadow: 0 5px 12px #4653c722;
+}
+.app-shell .btn.secondary {
+  border-color: var(--line);
+  color: #394965;
+  background: white;
+}
+.app-shell .btn.secondary:hover {
+  background: #f3f5fb;
+}
+.app-shell .text-btn,
+.app-shell .table-link {
+  color: var(--accent);
+}
+.app-shell .icon-btn {
+  color: #607087;
+}
+.app-shell .icon-btn:hover {
+  background: #edf0f8;
+}
+.app-shell .eyebrow {
+  color: #65748a;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+}
+.app-shell .field label {
+  color: #3d4d66;
+}
+.app-shell .field input,
+.app-shell .field select,
+.app-shell .field textarea {
+  background-color: #fff;
+  border-color: #dce2ee;
+  color: var(--ink);
+}
+.app-shell .field select:disabled {
+  background-color: #f6f7fb;
+  color: #778298;
+  cursor: not-allowed;
+}
+.app-shell .panel {
+  border-color: var(--line);
+  border-radius: 14px;
+}
+.app-shell .page-heading p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.app-shell .badge.neutral {
+  background: #f0f3fa;
+  color: #596c8a;
+  border-color: #dde5f1;
+}
+.app-shell .badge.neutral > span {
+  background: #6c81ab;
+}
+.app-shell .back-btn {
+  color: #596b88;
+}
+.app-shell .adjustments summary,
+.app-shell .analysis-details summary,
+.app-shell .setup-optional summary {
+  color: #526480;
+}
+.app-shell .empty-icon,
+.section-icon {
+  background: #eef0ff;
+  color: var(--accent);
+}
+.section-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.app-shell .trial-block {
+  background: #fbfcff;
+  border-color: var(--line);
+}
+.app-shell .block-number {
+  background: #edf0ff;
+  color: var(--accent);
+}
+.app-shell .measurement-help,
+.app-shell .setup-review {
+  background: #f0f3fc;
+  border-color: #dfe5f5;
+}
+.app-shell .measurement-help b,
+.app-shell .measurement-help p {
+  color: #526480;
+}
+.measurement-reference rect {
+  fill: #eef2ff;
+  stroke: #637dca;
+}
+.measurement-reference circle {
+  stroke: #637dca;
+}
+.measurement-reference g {
+  fill: #445c9a;
+}
+.app-shell .trial-completion {
+  color: #526480;
+}
+.app-shell .trial-completion progress::-webkit-progress-value {
+  background: var(--accent);
+}
+.app-shell .trial-completion progress::-moz-progress-bar {
+  background: var(--accent);
+}
+.app-shell .main-footer {
+  color: #647187;
+  gap: 18px;
+  font-size: 11px;
+  border-color: var(--line);
+}
+.app-shell .calibration-table th,
+.app-shell .calibration-table small {
+  color: #62728b;
+}
+.app-shell .calibration-table tbody tr:hover {
+  background: #f7f9fd;
+}
+.calibration-hero {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  align-items: center;
+  gap: 36px;
+  padding: 22px 0 40px;
+}
+.product-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  font-weight: 650;
+  margin-bottom: 20px;
+}
+.calibration-hero h1 {
+  font-size: clamp(32px, 3.7vw, 47px);
+  font-weight: 680;
+  line-height: 1.13;
+  max-width: 590px;
+}
+.calibration-hero h1 span {
+  color: var(--accent);
+}
+.calibration-hero-copy > p {
+  margin-top: 21px;
+  max-width: 490px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+.home-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+.home-actions .btn {
+  min-height: 49px;
+  padding: 13px 17px;
+}
+.calibration-hero-copy > .hero-footnote {
+  font-size: 12px;
+  color: #6b7891;
+  margin-top: 15px;
+}
+.calibration-hero-reference {
+  position: relative;
+  border: 1px solid #dfe5f5;
+  background: linear-gradient(145deg, #f3f5ff, #ebeff9);
+  padding: 25px 24px 23px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+.reference-caption {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 650;
+  color: #6f7a94;
+}
+.calibration-hero-reference .piece {
+  display: block;
+  width: 100%;
+  margin: -10px 0 -15px;
+}
+.reference-chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.reference-chips > span {
+  background: #ffffffd9;
+  border: 1px solid #dee4f3;
+  color: #66738b;
+  padding: 10px;
+  text-align: center;
+  font-size: 11px;
+  border-radius: 10px;
+}
+.reference-chips b {
+  display: block;
+  font-size: 14px;
+  color: #465781;
+  margin-top: 2px;
+}
+.calibration-hero-reference p {
+  color: #66738b;
+  font-size: 11px;
+  margin-top: 12px;
+  text-align: center;
+}
+.resume-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: white;
+  padding: 22px 25px;
+  border: 1px solid #d8e0f3;
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  margin-bottom: 25px;
+}
+.resume-card h2 {
+  font-size: 19px;
+  margin-top: 4px;
+}
+.resume-card p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 5px;
+}
+.resume-card .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.parameter-search {
+  padding: 30px;
+  margin-bottom: 35px;
+}
+.parameter-search h2 {
+  font-size: 24px;
+  margin-top: 6px;
+}
+.parameter-search .section-heading {
+  margin-bottom: 24px;
+  align-items: center;
+}
+.parameter-search .section-heading p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.parameter-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 17px;
+}
+.parameter-fields label {
+  font-size: 12px;
+}
+.parameter-search-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 23px;
+}
+.parameter-search-footer p {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 580px;
+}
+.parameter-search-footer .btn {
+  flex-shrink: 0;
+}
+.applied-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  background: #eef1ff;
+  border: 1px solid #dce2f8;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #48598a;
+}
+.applied-search p {
+  margin-top: 5px;
+}
+.recent-recipes {
+  margin: 0 0 34px;
+}
+.recent-recipes .section-heading {
+  align-items: end;
+}
+.recent-recipes h2 {
+  font-size: 23px;
+  margin-top: 6px;
+}
+.home-recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.home-recipe-card {
+  padding: 24px;
+}
+.home-recipe-card h3 {
+  margin: 16px 0 9px;
+  overflow-wrap: anywhere;
+}
+.home-recipe-card p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-recipe-card > div {
+  display: flex;
+  gap: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+}
+.home-recipe-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+.home-recipe-card b {
+  font-size: 16px;
+}
+.home-recipe-card button {
+  margin-top: 18px;
+}
+.home-guide-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+}
+.home-guide-card h2 {
+  font-size: 21px;
+  margin-top: 6px;
+}
+.home-guide-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.home-guide-card .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.home-history-link {
+  margin: 22px 0 0;
+}
+@media (max-width: 1050px) {
+  .header-inner {
+    gap: 24px;
+    padding: 16px 24px;
+  }
+  .header-tools {
+    gap: 6px;
+  }
+  .header-nav-item,
+  .header-history {
+    padding: 11px;
+  }
+  .parameter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calibration-hero {
+    gap: 26px;
+  }
+  .calibration-hero h1 {
+    font-size: 37px;
+  }
+  .home-actions .btn {
+    flex: 1;
+  }
+  .home-guide-card {
+    flex-wrap: wrap;
+  }
+  .home-guide-card .btn {
+    margin-left: 68px;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell main {
+    padding: 28px 20px 0;
+  }
+  .header-inner {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 13px 20px;
+    padding: 15px 20px 10px;
+  }
+  .primary-navigation {
+    order: 3;
+    width: 100%;
+    gap: 5px;
+  }
+  .header-nav-item {
+    flex: 1;
+    font-size: 13px;
+    padding: 11px 8px;
+  }
+  .header-tools {
+    gap: 5px;
+    margin-left: 0;
+  }
+  .header-history {
+    padding: 10px;
+  }
+  .header-history span {
+    display: none;
+  }
+  .workshop-menu > summary {
+    font-size: 12px;
+    padding: 10px;
+  }
+  .workshop-panel {
+    width: min(305px, calc(100vw - 40px));
+  }
+  .brand-button .logo-type {
+    font-size: 14px;
+  }
+  .brand-button .logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .calibration-hero {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 0 0 26px;
+  }
+  .calibration-hero h1 {
+    font-size: 36px;
+    max-width: 520px;
+  }
+  .calibration-hero-copy > p {
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .product-label {
+    margin-bottom: 16px;
+  }
+  .home-actions {
+    margin-top: 22px;
+    gap: 10px;
+  }
+  .home-actions .btn {
+    padding: 12px;
+    font-size: 12px;
+  }
+  .calibration-hero-reference {
+    max-width: 520px;
+    width: 100%;
+    padding: 18px 22px;
+    margin: auto;
+  }
+  .calibration-hero-reference .piece {
+    max-height: 200px;
+    margin: -6px 0 -10px;
+  }
+  .parameter-search {
+    padding: 22px;
+    margin-bottom: 26px;
+  }
+  .parameter-search .section-heading {
+    align-items: flex-start;
+  }
+  .parameter-search .section-heading .section-icon {
+    display: none;
+  }
+  .parameter-search h2 {
+    font-size: 22px;
+  }
+  .parameter-fields {
+    gap: 17px 13px;
+  }
+  .parameter-search-footer {
+    display: block;
+    margin-top: 19px;
+  }
+  .parameter-search-footer .btn {
+    width: 100%;
+    margin-top: 16px;
+  }
+  .resume-card {
+    padding: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .resume-card > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .resume-card .section-icon {
+    display: none;
+  }
+  .resume-card .btn {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 5px;
+  }
+  .home-recipe-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-guide-card {
+    padding: 22px;
+    gap: 14px;
+  }
+  .home-guide-card > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .home-guide-card h2 {
+    font-size: 19px;
+  }
+  .home-guide-card .btn {
+    width: 100%;
+    margin-left: 0;
+  }
+  .applied-search {
+    display: block;
+  }
+  .applied-search button {
+    margin-top: 8px;
+  }
+}
+@media (max-width: 420px) {
+  .app-shell main {
+    padding: 24px 16px 0;
+  }
+  .header-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .calibration-hero h1 {
+    font-size: 32px;
+  }
+  .home-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .parameter-fields {
+    grid-template-columns: 1fr;
+  }
+  .parameter-search {
+    padding: 21px;
+  }
+  .workshop-panel {
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+.home-name {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.home-name:hover {
+  color: var(--accent);
+}
+
+/* Four visible stages, shared by preparation, measurement and results. */
+.app-shell .flow-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  position: sticky;
+  top: 10px;
+  z-index: 12;
+  padding: 8px;
+  margin: 0 -8px 24px;
+  border-radius: 14px;
+  background: #f5f7fbf7;
+  backdrop-filter: blur(8px);
+  gap: 10px;
+}
+.app-shell .flow-steps li {
+  background: #fff;
+  border-color: var(--line);
+  color: #6c7790;
+  padding: 13px;
+}
+.app-shell .flow-steps .flow-number {
+  background: #eef1f7;
+  color: #687994;
+}
+.app-shell .flow-steps .current {
+  border-color: #9fa9eb;
+  background: #eef0ff;
+  color: var(--accent-dark);
+  box-shadow: 0 0 0 1px #a5aeef;
+}
+.app-shell .flow-steps .current .flow-number {
+  color: white;
+  background: var(--accent);
+}
+.app-shell .flow-steps .done .flow-number {
+  background: #e5edf9;
+  color: #526f9e;
+}
+.app-shell .flow-steps strong {
+  font-size: 12px;
+}
+.app-shell .flow-steps small {
+  font-size: 10px;
+}
+.app-shell .flow-steps.compact {
+  position: static;
+  backdrop-filter: none;
+  background: transparent;
+  margin: 20px 0 12px;
+  padding: 0;
+  gap: 8px;
+}
+.app-shell .flow-steps.compact li {
+  padding: 10px;
+  gap: 7px;
+}
+.app-shell .flow-steps.compact strong {
+  font-size: 11px;
+}
+.app-shell .results-heading h2,
+.app-shell .trial-form {
+  scroll-margin-top: 110px;
+}
+.guide-page .page-heading {
+  margin-bottom: 34px;
+}
+.guide-page h1 {
+  font-size: 36px;
+}
+.guided-procedure {
+  display: grid;
+  grid-template-columns: 0.8fr 1.3fr;
+  gap: 28px;
+  align-items: start;
+}
+.guide-pattern {
+  padding: 28px;
+  position: sticky;
+  top: 28px;
+}
+.guide-pattern .piece {
+  width: 100%;
+  display: block;
+  margin: 4px 0 6px;
+}
+.guide-nominals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.guide-nominals > span {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 17px 12px;
+  background: #f5f7fc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.guide-nominals b {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 19px;
+}
+.guide-tolerance {
+  margin-top: 22px;
+  padding: 18px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 15px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.guide-tolerance b {
+  font-size: 13px;
+}
+.guide-tolerance > span {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--accent);
+}
+.guide-tolerance small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.guide-pattern > p {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.procedure-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 17px;
+}
+.procedure-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 25px;
+}
+.procedure-number {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #edf0ff;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+.procedure-step > div {
+  flex: 1;
+  min-width: 0;
+}
+.procedure-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  margin: 4px 0 12px;
+}
+.procedure-step h2 svg {
+  flex-shrink: 0;
+  color: #697aa5;
+}
+.procedure-step p {
+  color: #55667f;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.procedure-step small {
+  display: block;
+  color: #64738b;
+  background: #f4f6fb;
+  padding: 11px 13px;
+  border-radius: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.procedure-step .measurement-reference {
+  max-width: 250px;
+  margin-top: 17px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f1f4fc;
+}
+.guide-faq {
+  margin-top: 30px;
+  display: grid;
+  gap: 12px;
+}
+.guide-faq details {
+  padding: 20px 25px;
+}
+.guide-faq summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 550;
+  color: #465777;
+}
+.guide-faq p {
+  font-size: 14px;
+  color: var(--muted);
+  padding-top: 13px;
+}
+.guide-start-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  background: #eef1ff;
+  border: 1px solid #dae1fa;
+  border-radius: 16px;
+  padding: 30px;
+  margin-top: 30px;
+}
+.guide-start-card h2 {
+  margin-top: 7px;
+  font-size: 25px;
+}
+.guide-start-card p {
+  color: #5c6c8d;
+  font-size: 14px;
+  margin-top: 9px;
+}
+@media (max-width: 1050px) {
+  .app-shell .flow-steps li {
+    padding: 11px;
+    gap: 8px;
+  }
+  .app-shell .flow-steps small {
+    display: none;
+  }
+  .guided-procedure {
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 18px;
+  }
+  .guide-pattern {
+    padding: 23px;
+  }
+  .guide-nominals {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell .flow-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin-left: -5px;
+    margin-right: -5px;
+    padding: 6px 5px;
+    top: 0;
+  }
+  .app-shell .flow-steps li,
+  .app-shell .flow-steps.compact li {
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 4px;
+    justify-content: flex-start;
+    text-align: center;
+    border-radius: 9px;
+  }
+  .app-shell .flow-steps strong,
+  .app-shell .flow-steps.compact strong {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .app-shell .flow-steps.compact {
+    gap: 5px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .app-shell .flow-steps .flow-number {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+  .app-shell .results-heading h2,
+  .app-shell .trial-form {
+    scroll-margin-top: 115px;
+  }
+  .guide-page h1 {
+    font-size: 30px;
+  }
+  .guided-procedure {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .guide-pattern {
+    position: static;
+  }
+  .guide-pattern .piece {
+    max-height: 210px;
+  }
+  .guide-nominals {
+    grid-template-columns: 1fr 1fr;
+    gap: 11px;
+  }
+  .guide-nominals b {
+    font-size: 17px;
+  }
+  .guide-tolerance > span {
+    font-size: 15px;
+  }
+  .procedure-step {
+    padding: 21px 18px;
+    gap: 12px;
+  }
+  .procedure-number {
+    width: 29px;
+    height: 29px;
+    font-size: 13px;
+  }
+  .procedure-step h2 {
+    font-size: 18px;
+    margin-top: 2px;
+  }
+  .procedure-step h2 svg {
+    display: none;
+  }
+  .procedure-step p {
+    font-size: 13px;
+  }
+  .guide-faq details {
+    padding: 20px;
+  }
+  .guide-start-card {
+    display: block;
+    padding: 23px;
+  }
+  .guide-start-card h2 {
+    font-size: 22px;
+  }
+  .guide-start-card .btn {
+    margin-top: 20px;
+    width: 100%;
+  }
+}
+/* Keep the skip link invisible until keyboard focus, including full-page captures. */
+.skip-link:not(:focus) {
+  opacity: 0;
+  pointer-events: none;
+}
+.app-shell .measurement,
+.app-shell .measurement > span {
+  color: var(--ink);
+  font-family: inherit;
+}
+.app-shell .notice:not(.warning):not(.good) {
+  background: #f1f4fc;
+  color: #53688b;
+  border-color: #dfe5f5;
+}
+.app-shell .recommendation.neutral {
+  background: #eff3fc;
+  border-color: #dce3f4;
+}
+.app-shell .recommendation.neutral .recommend-icon {
+  color: #6578ad;
+  border-color: #d5def2;
+}
+.app-shell .recommendation.neutral h3,
+.app-shell .recommendation.neutral p {
+  color: #526480;
+}
+.app-shell .setup-section-title > svg,
+.app-shell .setup-section-title > span {
+  background: #edf0ff;
+  color: #6578ad;
+}
+.app-shell .setup-section-title p,
+.app-shell .setup-footer p {
+  color: var(--muted);
+}
+
+.app-shell .modal-backdrop {
+  background: #24324d66;
+}

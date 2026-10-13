@@ -4,16 +4,22 @@ import type { Store } from "../domain/types";
 import { fmt } from "../domain/calibration";
 import { recipeQuality, savedRecipes } from "../domain/recipes";
 import { Badge, Empty, Field } from "./ui";
+import { matchesParameters } from "./ParameterSearch";
+import type { ParameterFilters } from "./ParameterSearch";
 export function RecipeLibrary({
   store,
   onOpen,
   onReuse,
   onStart,
+  parameterFilters,
+  onClearSearch,
 }: {
   store: Store;
   onOpen: (id: string) => void;
   onReuse: (id: string) => void;
   onStart: () => void;
+  parameterFilters: ParameterFilters | null;
+  onClearSearch: () => void;
 }) {
   const [printer, setPrinter] = useState("all"),
     [resin, setResin] = useState("all"),
@@ -21,6 +27,7 @@ export function RecipeLibrary({
   const all = savedRecipes(store),
     recipes = all.filter(
       (c) =>
+        matchesParameters(c, store, parameterFilters) &&
         (printer === "all" || c.printerId === printer) &&
         (resin === "all" || c.resinId === resin) &&
         (layer === "all" || String(c.trials.at(-1)!.layer) === layer),
@@ -30,7 +37,7 @@ export function RecipeLibrary({
       <div className="page-heading">
         <div>
           <span className="eyebrow">TU CONOCIMIENTO, GUARDADO</span>
-          <h1>Recetas de tu taller</h1>
+          <h1>Parámetros guardados</h1>
           <p>
             Encontrá parámetros que ya funcionaron y verificalos con una nueva
             impresión.
@@ -38,6 +45,27 @@ export function RecipeLibrary({
         </div>
         <BookOpen size={28} />
       </div>
+      {parameterFilters && (
+        <section className="applied-search" aria-label="Búsqueda aplicada">
+          <div>
+            <b>Combinación seleccionada</b>
+            <p>
+              {[
+                parameterFilters.brand,
+                store.models.find((m) => m.id === parameterFilters.modelId)
+                  ?.name,
+                parameterFilters.manufacturer,
+                parameterFilters.resinName,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Todas las combinaciones"}
+            </p>
+          </div>
+          <button className="text-btn" onClick={onClearSearch}>
+            Ver todas las combinaciones
+          </button>
+        </section>
+      )}
       {all.length > 0 && (
         <div className="panel recipe-filters form-grid">
           <Field label="Filtrar por impresora">
@@ -108,6 +136,7 @@ export function RecipeLibrary({
                     setPrinter("all");
                     setResin("all");
                     setLayer("all");
+                    onClearSearch();
                   }
                 : onStart
             }
