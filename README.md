@@ -55,25 +55,25 @@ Se genera con `npm run build:standalone`. La prueba `tests/standalone.spec.ts` v
 5. Fecha, observaciones y ajustes realmente aplicados en CHITUBOX están en secciones desplegables. Guardá y analizá para ver precisión y el próximo paso sugerido.
 6. **Preparar próximo ensayo** conserva parámetros y ajustes, prepara los parámetros del mecanismo propuesto para el próximo paso y limpia mediciones, encastre, soportes y observaciones. El historial permanece intacto.
 7. Compará ensayos anteriores. **Finalizar calibración** se habilita solo cuando el último ensayo cumple todos los criterios. Podés reabrir una calibración para continuar.
-8. Las calibraciones finalizadas aparecen en **Recetas guardadas**. Filtrá por impresora, resina y capa, consultá trazabilidad y repeticiones, y usá una receta como punto de partida sin copiar resultados. Dos calibraciones con distintas exposiciones para la misma combinación aparecen por separado.
+8. Las calibraciones finalizadas aparecen en **Parámetros**. Filtrá por impresora, resina y capa, consultá trazabilidad y repeticiones, y usá una receta como punto de partida sin copiar resultados. Dos calibraciones con distintas exposiciones para la misma combinación aparecen por separado.
 
-La navegación principal tiene **Vista general**, **Calibraciones** y **Recetas guardadas**. Impresoras y resinas siguen disponibles en el desplegable **Catálogo**, pero no son pasos obligatorios del flujo. Los registros antiguos que contienen dos resultados de encastre se conservan e identifican como registros anteriores; los ensayos nuevos registran un único encastre. Los respaldos existentes siguen siendo compatibles.
+La navegación principal del header es **Calibrar**, **Parámetros** y **Guía**. **Historial** reúne las calibraciones y sus ensayos; **Mi taller** contiene el catálogo y los respaldos. Impresoras y resinas se agregan juntas al comenzar una calibración. Los registros antiguos de dos encastres y los modelos pendientes se conservan, y los respaldos existentes siguen siendo compatibles.
 
-## Interfaz guiada (v1.2)
+## UX del handoff: Fase A (v1.3)
 
-El inicio destaca **Continuar calibración** cuando existe un proceso pendiente. En una instalación nueva muestra una única acción principal y tres pasos, sin estadísticas vacías. El formulario reúne datos de impresión y mediciones en dos bloques, con contador de datos completos, ejemplos de formato y un esquema de X/Y. Los ajustes opcionales se conservan en desplegables.
+El inicio presenta **Nueva calibración** y **Consultar parámetros**. El buscador encadena marca→modelo y marca→resina, muestra todas las recetas coincidentes y permite limpiar filtros. Dos equipos físicos del mismo modelo pueden aportar exposiciones distintas y se muestran por separado. El inicio permite retomar la calibración pendiente y consultar las últimas recetas locales, sin métricas vacías ni resultados públicos simulados.
 
-Al guardar, el foco y la vista pasan al resultado. La sugerencia y sus acciones aparecen primero: **Preparar próximo ensayo** si falta aprobar algún criterio, o **Finalizar calibración** y **Repetir para comprobar** cuando está aprobado. Los criterios pendientes se indican explícitamente. Al consultar un ensayo histórico aparece un aviso y **Volver al último ensayo**; las acciones del próximo ensayo se ofrecen en el último resultado.
+El progreso reutilizable muestra **Preparar → Medir → Resultado → Repetir / finalizar**, permanece visible durante el ensayo y deja el título del resultado libre al guardar. La guía explica siete pasos con ilustraciones propias, nominales y tolerancia actual. Las herramientas de catálogo y respaldo siguen disponibles desde el header; cerrar la preparación devuelve el foco al botón que la abrió. Estilos azul/índigo, superficies claras y navegación visible también en móvil.
 
-En móvil, los controles de entrada tienen más espacio y X/Y se muestran juntos. Los estados visibles se expresan en español; la biblioteca permite iniciar una calibración desde su estado vacío y limpiar filtros cuando no hay coincidencias. La interfaz no cambia la identidad de las calibraciones ni fusiona resultados.
+[Referencia recibida](docs/UX_REFERENCE_UDENT.md) y [comparación, riesgos y plan por fases](docs/ux-implementation-plan.md). Esta etapa conserva el algoritmo y los formatos de almacenamiento. El documento menciona Django, pero el proyecto actual es React con almacenamiento local y un archivo SQLite. Los cambios a ±0,025 mm, cinco encastres, modal de resultado, moderación y base pública corresponden a las próximas fases; necesitan protocolo/migración y decisiones de backend. No hay un STL propio descargable incluido todavía.
 
 ## Arquitectura
 
 - `src/domain/`: tipos, referencia centralizada, análisis, validación y reglas de recomendación. Funciones independientes de React, con pruebas.
 - `src/data/`: catálogo inicial y contrato `Repository` con implementación `localStorage` versionada. Una futura implementación remota puede reemplazar ese adaptador; identidad y permisos se incorporarán en esa capa.
 - `src/components/`: componentes compartidos, catálogo, formulario unificado de inicio, campos reutilizables de equipo/material, gráficos y detalle de calibración.
-- `src/App.tsx`: navegación local, coordinación de datos, dashboard y respaldo/restauración.
-- `src/styles.css`: Tailwind, identidad visual, diseño responsive y estados de interacción. Tipografías empaquetadas localmente, sin solicitudes a Google Fonts.
+- `src/App.tsx`: navegación local, coordinación de datos y respaldo/restauración. `AppHeader`, `Home`, `ParameterSearch` y `Guide` separan la interfaz principal.
+- `src/styles.css`: base de componentes y Tailwind. `src/styles/ux-shell.css`: identidad azul/índigo, navegación, búsqueda, guía, progreso y adaptación responsive de la Fase A. No se descargan tipografías externas.
 - `database/001_initial.sql`: esquema relacional SQLite con catálogo, orígenes, equipos físicos, protocolos, calibraciones, ensayos inmutables, candidatos y eventos de revisión.
 - `scripts/database.ts`, `data-import.ts`, `data-profiles.ts`: archivo transaccional de respaldos y consulta de cada perfil por separado.
 - `tests/`: pruebas Playwright de los flujos reales y pruebas de integración contra SQLite.

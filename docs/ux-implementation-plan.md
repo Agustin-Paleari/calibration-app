@@ -13,26 +13,26 @@ Referencia entregada por el usuario: [UX_REFERENCE_UDENT.md](UX_REFERENCE_UDENT.
 
 ## Comparación con los criterios del handoff
 
-| Criterio | Estado antes de esta etapa | Alcance / siguiente etapa |
-| --- | --- | --- |
-| Home sin dashboard técnico | Progreso y métricas de laboratorio | Fase A: hero con calibrar/consultar, buscador y actividad local |
-| Marca→modelo / marca→resina | Implementado en preparación | Conservar y usar también en búsqueda |
-| Entradas manuales PENDING | Modelo sí; resina no | Fase C: estados y auditoría en ambos catálogos |
-| Progreso por pasos | Componente de tres pasos | Fase A: cuatro pasos reutilizables |
-| Medición X/Y protagonista | Formulario con esquema propio | Fase B: workspace de medición |
-| Pin con cinco estados | Tres estados, más datos legacy | Fase B: schema versionado y compatibilidad |
-| Soportes con tres estados | Implementado con desplegable | Fase B: radio cards |
-| Analizar abre modal | Resultado en la misma vista | Fase B: modal accesible conservando historial |
-| Error en mm, µm, % y corrección | mm/% y ajustes existentes | Fase B: presentación completa |
-| Fórmula exacta de escala | Implementada, sin límite de ±1 punto | Conservar y verificar con tests |
-| Redondeo a tres decimales | `q3`; formato a tres decimales | Revisar ROUND_HALF_UP, especialmente negativos, en Fase B |
-| Próximo ensayo permanece en calibración | Implementado | Conservar |
-| Historial conserva resultados | Implementado, archivo SQLite inmutable | Conservar; no fusionar calibraciones |
-| Aprobadas aparecen públicamente | No hay API/base pública conectada | Fase C/backend: definir publicación y permisos |
-| PENDING no se publica | No existe publicación | Fase C/backend: regla de elegibilidad real |
-| Admin corrige/fusiona catálogo | No implementado | Fase C: identidades canónicas y merge auditado |
-| Desktop y mobile | Implementado | Fase A: revisar nueva navegación, guía y búsqueda |
-| SQLite migra sin pérdida | Archivo de esquema v1, importador probado | Fase A sin cambios de schema; migración explícita en B/C |
+| Criterio                                | Estado antes de esta etapa                | Alcance / siguiente etapa                                       |
+| --------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| Home sin dashboard técnico              | Progreso y métricas de laboratorio        | Fase A: hero con calibrar/consultar, buscador y actividad local |
+| Marca→modelo / marca→resina             | Implementado en preparación               | Conservar y usar también en búsqueda                            |
+| Entradas manuales PENDING               | Modelo sí; resina no                      | Fase C: estados y auditoría en ambos catálogos                  |
+| Progreso por pasos                      | Componente de tres pasos                  | Fase A: cuatro pasos reutilizables                              |
+| Medición X/Y protagonista               | Formulario con esquema propio             | Fase B: workspace de medición                                   |
+| Pin con cinco estados                   | Tres estados, más datos legacy            | Fase B: schema versionado y compatibilidad                      |
+| Soportes con tres estados               | Implementado con desplegable              | Fase B: radio cards                                             |
+| Analizar abre modal                     | Resultado en la misma vista               | Fase B: modal accesible conservando historial                   |
+| Error en mm, µm, % y corrección         | mm/% y ajustes existentes                 | Fase B: presentación completa                                   |
+| Fórmula exacta de escala                | Implementada, sin límite de ±1 punto      | Conservar y verificar con tests                                 |
+| Redondeo a tres decimales               | `q3`; formato a tres decimales            | Revisar ROUND_HALF_UP, especialmente negativos, en Fase B       |
+| Próximo ensayo permanece en calibración | Implementado                              | Conservar                                                       |
+| Historial conserva resultados           | Implementado, archivo SQLite inmutable    | Conservar; no fusionar calibraciones                            |
+| Aprobadas aparecen públicamente         | No hay API/base pública conectada         | Fase C/backend: definir publicación y permisos                  |
+| PENDING no se publica                   | No existe publicación                     | Fase C/backend: regla de elegibilidad real                      |
+| Admin corrige/fusiona catálogo          | No implementado                           | Fase C: identidades canónicas y merge auditado                  |
+| Desktop y mobile                        | Implementado                              | Fase A: revisar nueva navegación, guía y búsqueda               |
+| SQLite migra sin pérdida                | Archivo de esquema v1, importador probado | Fase A sin cambios de schema; migración explícita en B/C        |
 
 ## Compatibilidad y diferencias a resolver
 
@@ -57,3 +57,17 @@ Referencia entregada por el usuario: [UX_REFERENCE_UDENT.md](UX_REFERENCE_UDENT.
 ## Verificación de Fase A
 
 Checks apropiados a este repositorio: `npm test`, `npm run build:standalone`, Playwright con Chromium y revisión visual desktop/mobile. La suite SQLite verifica importación transaccional y conservación de dos exposiciones para una combinación. `python manage.py check` no aplica porque no existe un proyecto Django. No se modifica ninguna migración en esta etapa.
+
+## Entrega de Fase A (v1.3)
+
+La versión continúa la numeración del repo (v1.2 → v1.3); implementa la Fase A del hito llamado v0.3 en el handoff. Se separaron los componentes `AppHeader`, `Home`, `ParameterSearch` y `Guide`, y se integró la nueva interfaz en un commit posterior. Los estilos de esta etapa están en `src/styles/ux-shell.css`, después de la base de componentes.
+
+- Home con dos acciones, búsqueda encadenada, recuperación de una calibración pendiente y últimas recetas locales. Sin estadísticas vacías ni evidencia pública simulada.
+- Header Calibrar / Parámetros / Guía, acceso a Historial y menú Mi taller con catálogo, exportación y restauración.
+- Progreso reutilizable de cuatro etapas, visible al desplazarse. Al guardar, el título enfocado queda debajo del progreso, sin quedar tapado. Repetir regresa a Medir dentro de la calibración.
+- Guía visual de siete pasos, referencia propia y unidades mm/µm. El valor de tolerancia se toma del protocolo actual y la falta del STL se informa claramente.
+- Navegación accesible en móvil, cierre del menú con Escape, devolución del foco al cerrar la preparación y exclusión de campos ocultos del recorrido de Tab en el modal.
+
+Verificación realizada: **53 tests unitarios/SQLite**, **24 tests Playwright**, TypeScript, compilación de producción y regeneración/prueba del HTML autónomo. Revisión visual en escritorio y móvil. Las pruebas incluyen dos equipos del mismo modelo y material con exposiciones 2,500 s y 2,800 s: ambos aparecen en la búsqueda; consultar y limpiar filtros no altera sus datos. Las pruebas también conservan los casos de encastres legacy, modelos pendientes, respaldos válidos/corruptos y ensayo siguiente con resultados vacíos.
+
+`src/domain`, `src/data`, `database` y los scripts de importación conservan su implementación anterior. No se reinterpretan resultados ni se modifican formatos de respaldo o schema. Para Fase B se mantiene pendiente el diseño de protocolo/migración para ±0,025 mm y cinco encastres; para Fase C, confirmar el backend real y construir moderación/publicación. La ilustración actual es propia y estática, sin controles de cámara simulados.
